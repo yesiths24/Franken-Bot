@@ -5,32 +5,15 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <io.github.controlwear.virtual.joystick.android.JoystickView
-        android:id="@+id/joystick1"
-        android:layout_width="103dp"
-        android:layout_height="98dp"
-        app:JV_backgroundColor="#009688"
-        app:JV_borderColor="#00796B"
-        app:JV_borderWidth="4dp"
-        app:JV_buttonColor="#FF6E40"
-        app:JV_buttonSizeRatio="15%"
-        app:JV_fixedCenter="false"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.028"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.944" />
-
     <TextView
         android:id="@+id/textView1"
         android:layout_width="118dp"
         android:layout_height="44dp"
-        android:layout_marginBottom="16dp"
         android:text="TextView"
-        app:layout_constraintBottom_toTopOf="@+id/joystick1"
-        app:layout_constraintEnd_toEndOf="@+id/joystick1"
-        app:layout_constraintStart_toStartOf="@+id/joystick1" />
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/playerView1" />
 
     <androidx.media3.ui.PlayerView
         android:id="@+id/playerView1"
@@ -40,5 +23,31 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
+
+    <SeekBar
+        android:id="@+id/seekBar1"
+        android:layout_width="wrap_content"
+        android:layout_height="0dp"
+        android:rotation="270"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toStartOf="@+id/textView1"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/playerView1"
+        android:max="200"
+        android:minWidth="150dp"
+        android:progress="100"/>
+
+    <SeekBar
+        android:id="@+id/seekBar2"
+        android:layout_width="wrap_content"
+        android:layout_height="0dp"
+        android:rotation="270"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@+id/textView1"
+        app:layout_constraintTop_toBottomOf="@+id/playerView1"
+        android:max="200"
+        android:minWidth="150dp"
+        android:progress="100"/>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

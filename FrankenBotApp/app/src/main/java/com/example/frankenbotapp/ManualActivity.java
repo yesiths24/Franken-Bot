@@ -10,9 +10,11 @@ import android.content.pm.ActivityInfo;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -28,14 +30,44 @@ public class ManualActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.manual_control);
-        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
-        JoystickView joystick = (JoystickView) findViewById(R.id.joystick1);
+        //setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+        SeekBar leftStick = (SeekBar) findViewById(R.id.seekBar1);
+        SeekBar rightStick = (SeekBar) findViewById(R.id.seekBar2);
         TextView textView1 = (TextView) findViewById(R.id.textView1);
-        joystick.setOnMoveListener(new JoystickView.OnMoveListener() {
+
+        leftStick.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
-            public void onMove(int angle, int strength) {
-                textView1.setText("Angle: " + angle + "°" + "\nStrength: " + strength + "%");
-                sendTcpPacket("Move", angle + "," + strength);
+            public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
+                String message = String.format(Locale.CANADA, "%d,%d", i-100, rightStick.getProgress()-100);
+                textView1.setText(message);
+                sendTcpPacket("drv", message);
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                seekBar.setProgress(100);
+            }
+        });
+
+        rightStick.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
+                String message = String.format(Locale.CANADA, "%d,%d", leftStick.getProgress()-100, i-100);
+                textView1.setText(message);
+                sendTcpPacket("drv", message);
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                seekBar.setProgress(100);
             }
         });
 

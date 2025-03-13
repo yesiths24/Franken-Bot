@@ -39,6 +39,7 @@
     "files.associations": {
         "*.sql": "sqlite",
         "stdlib.h": "c",
-        "cyw43_arch.h": "c"
+        "cyw43_arch.h": "c",
+        "stdio.h": "c"
     }
 }
