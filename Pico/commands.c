@@ -5,14 +5,14 @@
 #include "drive.c"
 
 void process_command(Data *data) {
-    if (strcmp(data->command, "Move") == 0) {
+    if (strcmp(data->command, "drv") == 0) {
         printf("Moving to %s\n", data->message);
 
-        int angle, power;
+        float left, right;
         
-        sscanf(data->message, "%d,%d", angle, power);
+        sscanf(data->message, "%f,%f",&left, &right);
         
-        moveAngleSpeed(angle, power);
+        setDriveSpeeds(left, right);
 
         
 

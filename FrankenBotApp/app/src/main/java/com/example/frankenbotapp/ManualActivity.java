@@ -31,45 +31,81 @@ public class ManualActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.manual_control);
         //setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
-        SeekBar leftStick = (SeekBar) findViewById(R.id.seekBar1);
-        SeekBar rightStick = (SeekBar) findViewById(R.id.seekBar2);
+//        SeekBar leftStick = (SeekBar) findViewById(R.id.seekBar1);
+//        SeekBar rightStick = (SeekBar) findViewById(R.id.seekBar2);
+        JoystickView leftStick = (JoystickView) findViewById(R.id.joystick1);
+        JoystickView rightStick = (JoystickView) findViewById(R.id.joystick2);
+        leftStick.setAutoReCenterButton(true);
+        rightStick.setAutoReCenterButton(true);
+
         TextView textView1 = (TextView) findViewById(R.id.textView1);
 
-        leftStick.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+        leftStick.setOnMoveListener(new JoystickView.OnMoveListener() {
             @Override
-            public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
-                String message = String.format(Locale.CANADA, "%d,%d", i-100, rightStick.getProgress()-100);
+            public void onMove(int angle, int strength) {
+                int leftMotorSpeed = 2*(50 - leftStick.getNormalizedY());
+                int rightMotorSpeed = 2*(50 - rightStick.getNormalizedY());
+
+                String message = String.format(Locale.CANADA, "%d,%d", leftMotorSpeed, rightMotorSpeed);
                 textView1.setText(message);
                 sendTcpPacket("drv", message);
             }
-
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
-            }
-
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
-                seekBar.setProgress(100);
-            }
         });
 
-        rightStick.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+
+        rightStick.setOnMoveListener(new JoystickView.OnMoveListener() {
             @Override
-            public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
-                String message = String.format(Locale.CANADA, "%d,%d", leftStick.getProgress()-100, i-100);
+            public void onMove(int angle, int strength) {
+                int leftMotorSpeed = 2*(50 - leftStick.getNormalizedY());
+                int rightMotorSpeed = 2*(50 - rightStick.getNormalizedY());
+
+                String message = String.format(Locale.CANADA, "%d,%d", leftMotorSpeed, rightMotorSpeed);
                 textView1.setText(message);
                 sendTcpPacket("drv", message);
             }
-
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
-            }
-
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
-                seekBar.setProgress(100);
-            }
         });
+//
+//        leftStick.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+//            @Override
+//            public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
+//                String message = String.format(Locale.CANADA, "%d,%d", i-100, rightStick.getProgress()-100);
+//                textView1.setText(message);
+//                sendTcpPacket("drv", message);
+//            }
+//
+//            @Override
+//            public void onStartTrackingTouch(SeekBar seekBar) {
+//            }
+//
+//            @Override
+//            public void onStopTrackingTouch(SeekBar seekBar) {
+//                seekBar.setProgress(100);
+//                String message = String.format(Locale.CANADA, "%d,%d", 0, rightStick.getProgress()-100);
+//                textView1.setText(message);
+//                sendTcpPacket("drv", message);
+//            }
+//        });
+//
+//        rightStick.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+//            @Override
+//            public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
+//                String message = String.format(Locale.CANADA, "%d,%d", leftStick.getProgress()-100, i-100);
+//                textView1.setText(message);
+//                sendTcpPacket("drv", message);
+//            }
+//
+//            @Override
+//            public void onStartTrackingTouch(SeekBar seekBar) {
+//            }
+//
+//            @Override
+//            public void onStopTrackingTouch(SeekBar seekBar) {
+//                seekBar.setProgress(100);
+//                String message = String.format(Locale.CANADA, "%d,%d", leftStick.getProgress()-100, 0);
+//                textView1.setText(message);
+//                sendTcpPacket("drv", message);
+//            }
+//        });
 
         PlayerView playerView = (PlayerView) findViewById(R.id.playerView1);
         Player player = new ExoPlayer.Builder(this).build();
