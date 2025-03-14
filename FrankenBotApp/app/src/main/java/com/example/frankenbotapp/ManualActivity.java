@@ -52,7 +52,6 @@ public class ManualActivity extends AppCompatActivity {
             }
         });
 
-
         rightStick.setOnMoveListener(new JoystickView.OnMoveListener() {
             @Override
             public void onMove(int angle, int strength) {
