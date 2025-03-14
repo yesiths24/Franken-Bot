@@ -49,6 +49,8 @@ target_link_libraries(Connect
         pico_stdlib
         pico_lwip_http
         hardware_adc
+        hardware_pwm
+        hardware_clocks
         )
 
 # Add the standard include files to the build
