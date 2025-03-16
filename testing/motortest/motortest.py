@@ -1,0 +1,16 @@
+from machine import Pin, PWM
+stby = Pin(2, Pin.OUT)
+a1 = Pin(4, Pin.OUT)
+a2 = Pin(5, Pin.OUT)
+b1 = Pin(7, Pin.OUT)
+b2 = Pin(8, Pin.OUT)
+pwmA = PWM(Pin(3), freq=980)
+pwmB = PWM(Pin(6), freq=980)
+a1.on()
+b1.on()
+a2.off()
+b2.off()
+stby.on()
+pwmA.duty_u16(32768)
+pwmB.duty_u16(32768)
+
