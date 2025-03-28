@@ -170,3 +170,15 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 /.idea
+.vscode/settings.json
+testing/i2c_test/.vscode/extensions.json
+testing/i2c_bus_scan/.vscode/c_cpp_properties.json
+testing/i2c_bus_scan/.vscode/cmake-kits.json
+testing/i2c_bus_scan/.vscode/extensions.json
+testing/i2c_bus_scan/.vscode/launch.json
+testing/i2c_bus_scan/.vscode/settings.json
+testing/i2c_bus_scan/.vscode/tasks.json
+testing/i2c_test/.vscode/settings.json
+testing/IMU-test/.vscode/extensions.json
+testing/IMU-test/.vscode/settings.json
+FrankenBotApp/gradle/wrapper/gradle-wrapper.properties

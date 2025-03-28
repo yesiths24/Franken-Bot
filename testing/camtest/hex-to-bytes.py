@@ -5,7 +5,11 @@
 
 import sys
 output =  open("output.jpeg", 'wb')
-for line in sys.stdin:
+input = open("testimage.txt","r")
+
+
+for line in input:
     output.write(bytearray(int(i, 16) for i in line.strip().split(' ')))
 
-output.close();
+output.close()
+input.close()
