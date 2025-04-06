@@ -5,7 +5,7 @@
 
 import sys
 output =  open("output.jpeg", 'wb')
-input = open("testimage.txt","r")
+input = open("testimage_0.txt","r")
 
 
 for line in input:

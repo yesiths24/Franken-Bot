@@ -182,3 +182,7 @@ testing/i2c_test/.vscode/settings.json
 testing/IMU-test/.vscode/extensions.json
 testing/IMU-test/.vscode/settings.json
 FrankenBotApp/gradle/wrapper/gradle-wrapper.properties
+testing/servo-test/.vscode/extensions.json
+testing/servo-test/.vscode/settings.json
+controller-core/.vscode/extensions.json
+testing/autonomous-drive_test/.vscode/extensions.json

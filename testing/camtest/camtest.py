@@ -2,7 +2,7 @@ from machine import UART, Pin
 import time
 import math
 
-uart1 = UART(1, baudrate=921600, tx=Pin(4), rx=Pin(5))
+uart1 = UART(0, baudrate=921600, tx=Pin(0), rx=Pin(1))
 
 # SYNC
 txData = bytes.fromhex("AA0D00000000")
@@ -38,8 +38,8 @@ while uart1.any() > 0:
 
 print(rxData.hex(' '))
 
-#SET PACKAGE SIZE 256 Bytes
-txData = bytes.fromhex("AA 06 08 00 01 00")
+#SET PACKAGE SIZE 512 Bytes
+txData = bytes.fromhex("AA 06 08 00 02 00")
 rxData = bytes()
 
 uart1.write(txData)
@@ -51,22 +51,22 @@ while uart1.any() > 0:
 print(rxData.hex(' '))
 
 #SNAPSHOT
-txData = bytes.fromhex("AA 05 00 00 00 00")
-rxData = bytes()
+# txData = bytes.fromhex("AA 05 00 00 00 00")
+# rxData = bytes()
 
-uart1.write(txData)
+# uart1.write(txData)
 
-time.sleep(0.1)
-while uart1.any() > 0:
-    rxData += uart1.read(1)
+# time.sleep(0.1)
+# while uart1.any() > 0:
+#     rxData += uart1.read(1)
 
-print(rxData.hex(' '))
+# print(rxData.hex(' '))
 
 #GET PICTURE
 frame_counter = 0
 
 while frame_counter<20:
-    txData = bytes.fromhex("AA 04 01 00 00 00")
+    txData = bytes.fromhex("AA 04 05 00 00 00")
     rxData = bytes()
 
     uart1.write(txData)
@@ -82,11 +82,11 @@ while frame_counter<20:
     size = rxData[11]*256^2 + rxData[10]*256 + rxData[9]
 
     print("Image Size: {}".format(size))
-    numPackages = math.ceil(size / (256-6))
+    numPackages = math.ceil(size / (512-6))
 
-    filename = "testimage_{}.txt".format(frame_counter)
+    filename = "testimage_{}.jpg".format(frame_counter)
 
-    with open(filename, "w") as f:
+    with open(filename, "wb") as f:
         for i in range(0, numPackages-1):
             # print("\nPackage Number: {}\n".format(i))
             prompt = bytes.fromhex("AA0E0000{:02x}00".format(i))
@@ -106,9 +106,8 @@ while frame_counter<20:
                 #     count = count + 1
                 
             
-            for i in range(4, 254):
-                
-                f.write("0x{} ".format(rxData[i:i+1].hex(), end=" "))
+
+            f.write(rxData[4:510])
             # print("\nPackage Complete - Printed {} bytes\n".format(count))
 
         prompt = bytes.fromhex("AA0E0000{:02x}00".format(numPackages-1))
@@ -123,8 +122,8 @@ while frame_counter<20:
             time.sleep(0.0001)
             count = count + 1
 
-        for i in range(4, count-2):
-            f.write("0x{} ".format(rxData[i:i+1].hex(), end=" "))
+        #for i in range(4, count-2):
+        f.write(rxData[4:count-2])
 
     frame_counter += 1
     prompt = bytes.fromhex("AA0E0000F0F0")
