@@ -28,37 +28,25 @@ set(PICO_BOARD pico_w CACHE STRING "Board type")
 # Pull in Raspberry Pi Pico SDK (must be before project)
 include(pico_sdk_import.cmake)
 
-project(autonomous-drive_test C CXX ASM)
+project(uart_advanced C CXX ASM)
 
 # Initialise the Raspberry Pi Pico SDK
 pico_sdk_init()
 
 # Add executable. Default name is the project name, version 0.1
 
-add_executable(autonomous-drive_test autonomous-drive_test.cpp )
-
-pico_set_program_name(autonomous-drive_test "autonomous-drive_test")
-pico_set_program_version(autonomous-drive_test "0.1")
-
-# Modify the below lines to enable/disable output over UART/USB
-pico_enable_stdio_uart(autonomous-drive_test 0)
-pico_enable_stdio_usb(autonomous-drive_test 1)
-
-
-# Add the standard library to the build
-target_link_libraries(autonomous-drive_test
-        pico_stdlib)
-
-# Add the standard include files to the build
-target_include_directories(autonomous-drive_test PRIVATE
-        ${CMAKE_CURRENT_LIST_DIR}
-)
-
-# Add any user requested libraries
-target_link_libraries(autonomous-drive_test 
-        hardware_irq
-        hardware_pwm
+add_executable(uart_advanced
+        uart_advanced.c
         )
 
-pico_add_extra_outputs(autonomous-drive_test)
+        # Modify the below lines to enable/disable output over UART/USB
+pico_enable_stdio_uart(uart_advanced 0)
+pico_enable_stdio_usb(uart_advanced 1)
 
+# pull in common dependencies and additional uart hardware support
+target_link_libraries(uart_advanced pico_stdlib hardware_uart)
+
+# create map/bin/hex file etc.
+pico_add_extra_outputs(uart_advanced)
+
+# add url via pico_set_program_url

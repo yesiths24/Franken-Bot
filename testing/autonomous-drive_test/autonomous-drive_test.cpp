@@ -4,7 +4,6 @@
 #include "hardware/irq.h"
 #include "drive.cpp"
 
-
 // UART defines
 // By default the stdout UART is `uart0`, so we will use the second one
 #define UART_ID uart1
@@ -19,39 +18,6 @@
 #define UART_RX_PIN 5
 
 #define DRIVE_SPEED 35
-
-
-// void on_uart_rx() {
-//     uint8_t cmd[5];
-//     while (uart_is_readable(UART_ID)) {
-//         uart_read_blocking(UART_ID, cmd, 4);
-//         if (cmd[0] == (uint8_t) 'D' && cmd[1] == (uint8_t) 'R') {
-//             switch (cmd[2]) {
-//                 case (uint8_t) 'F':
-//                     setDriveSpeeds(DRIVE_SPEED, DRIVE_SPEED);
-//                     printf("drive forward\n");
-//                     break;
-//                 case (uint8_t) 'B':
-//                     setDriveSpeeds(-DRIVE_SPEED, -DRIVE_SPEED);
-//                     printf("drive backward\n");
-//                     break;
-//                 case (uint8_t) 'L':
-//                     setDriveSpeeds(-DRIVE_SPEED, DRIVE_SPEED);
-//                     printf("turn left\n");
-//                     break;
-//                 case (uint8_t) 'R':
-//                     setDriveSpeeds(DRIVE_SPEED, -DRIVE_SPEED);
-//                     printf("turn right\n");
-//                     break;
-//                 default:
-//                     setDriveSpeeds(0,0);
-//                     printf("halt\n");
-//                     break;
-//             }
-//         }
-//     }
-// }
-
 
 int main()
 {
@@ -71,61 +37,65 @@ int main()
         uart_getc(UART_ID);
     }
 
+    uint8_t cmd_chr;
+    bool valid_cmd;
+
     while(1) {
-        uint8_t cmd[5];
-        cmd[0] = uart_getc(UART_ID);
-        cmd[1] = uart_getc(UART_ID);
-        cmd[2] = uart_getc(UART_ID);
-        //cmd[3] = uart_getc(UART_ID);
+        valid_cmd = 0;
 
-        char state = 'S';
-
-        printf("Recv: %c %c %c\n", cmd[0], cmd[1], cmd[2]);
-
-        if (cmd[0] == (uint8_t) 'D' && cmd[1] == (uint8_t) 'R') {
-            switch (cmd[2]) {
-                case (uint8_t) 'F':
-                    setDriveSpeeds(DRIVE_SPEED, DRIVE_SPEED);
-                    printf("drive forward\n");
-                    break;
-                case (uint8_t) 'B':
-                    setDriveSpeeds(-DRIVE_SPEED, -DRIVE_SPEED);
-                    printf("drive backward\n");
-                    break;
-                case (uint8_t) 'L':
-                    setDriveSpeeds(-DRIVE_SPEED, DRIVE_SPEED);
-                    printf("turn left\n");
-                    break;
-                case (uint8_t) 'R':
-                    setDriveSpeeds(DRIVE_SPEED, -DRIVE_SPEED);
-                    printf("turn right\n");
-                    break;
-                default:
-                    setDriveSpeeds(0, 0);
-                    printf("halt\n");
-                    break;
+        cmd_chr = uart_getc(UART_ID);
+        if (cmd_chr == (uint8_t) 'D') {
+            cmd_chr = uart_getc(UART_ID);
+            if (cmd_chr == (uint8_t) 'R') {
+                cmd_chr = uart_getc(UART_ID);
+                switch (cmd_chr) {
+                    case (uint8_t) 'F':
+                        setDriveSpeeds(DRIVE_SPEED, DRIVE_SPEED);
+                        printf("drive forward\n");
+                        valid_cmd = 1;
+                        break;
+                    case (uint8_t) 'B':
+                        setDriveSpeeds(-DRIVE_SPEED, -DRIVE_SPEED);
+                        printf("drive backward\n");
+                        valid_cmd = 1;
+                        break;
+                    case (uint8_t) 'L':
+                        setDriveSpeeds(-DRIVE_SPEED, DRIVE_SPEED);
+                        printf("drive left\n");
+                        valid_cmd = 1;
+                        break;
+                    case (uint8_t) 'R':
+                        setDriveSpeeds(DRIVE_SPEED, -DRIVE_SPEED);
+                        printf("drive right\n");
+                        valid_cmd = 1;
+                        break;
+                    case (uint8_t) 'S':
+                        setDriveSpeeds(0, 0);
+                        printf("drive stop\n");
+                        valid_cmd = 1;
+                        break;
+                }
             }
-        } else {
-            printf("halt\n");
-            setDriveSpeeds(0,0);
+        } else if (cmd_chr == (uint8_t) 'M') {
+            cmd_chr = uart_getc(UART_ID);
+            if (cmd_chr == (uint8_t) 'R') {
+                cmd_chr = uart_getc(UART_ID);
+                if (cmd_chr == (uint8_t) 'S') {
+                    int8_t leftSpeedByte = uart_getc(UART_ID);
+                    int8_t rightSpeedByte = uart_getc(UART_ID);
+                    valid_cmd = 1;
+                    setDriveSpeeds((float) leftSpeedByte, (float) rightSpeedByte);
+                }
+            }
         }
+
+        if (!valid_cmd) {
+            setDriveSpeeds(0,0);
+            printf("invalid command: stopping!\n");
+        }
+        
+        
     }
-
-
-    // // Set UART flow control CTS/RTS, we don't want these, so turn them off
-    // uart_set_hw_flow(UART_ID, false, false);
-
-    // // Set our data format
-    // uart_set_format(UART_ID, DATA_BITS, STOP_BITS, PARITY);
-
-    // // Turn off FIFO's - we want to do this character by character
-    // uart_set_fifo_enabled(UART_ID, false);
-    
-    // int UART_IRQ = UART_ID == uart1 ? UART0_IRQ : UART1_IRQ;
-    // irq_set_exclusive_handler(UART_IRQ, on_uart_rx);
-    // irq_set_enabled(UART_IRQ, true);
-
-    // uart_set_irqs_enabled(UART_ID, true, false);
 
     while (1) {
         continue;

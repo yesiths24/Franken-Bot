@@ -23,42 +23,40 @@ if (EXISTS ${picoVscode})
     include(${picoVscode})
 endif()
 # ====================================================================================
-set(PICO_BOARD pico_w CACHE STRING "Board type")
+set(PICO_BOARD pico CACHE STRING "Board type")
 
 # Pull in Raspberry Pi Pico SDK (must be before project)
 include(pico_sdk_import.cmake)
 
-project(autonomous-drive_test C CXX ASM)
+project(threading_test C CXX ASM)
 
 # Initialise the Raspberry Pi Pico SDK
 pico_sdk_init()
 
 # Add executable. Default name is the project name, version 0.1
 
-add_executable(autonomous-drive_test autonomous-drive_test.cpp )
+add_executable(threading_test threading_test.cpp )
 
-pico_set_program_name(autonomous-drive_test "autonomous-drive_test")
-pico_set_program_version(autonomous-drive_test "0.1")
+pico_set_program_name(threading_test "threading_test")
+pico_set_program_version(threading_test "0.1")
 
 # Modify the below lines to enable/disable output over UART/USB
-pico_enable_stdio_uart(autonomous-drive_test 0)
-pico_enable_stdio_usb(autonomous-drive_test 1)
-
+pico_enable_stdio_uart(threading_test 0)
+pico_enable_stdio_usb(threading_test 1)
 
 # Add the standard library to the build
-target_link_libraries(autonomous-drive_test
+target_link_libraries(threading_test
         pico_stdlib)
 
 # Add the standard include files to the build
-target_include_directories(autonomous-drive_test PRIVATE
+target_include_directories(threading_test PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}
 )
 
 # Add any user requested libraries
-target_link_libraries(autonomous-drive_test 
-        hardware_irq
-        hardware_pwm
+target_link_libraries(threading_test 
+        pico_cyw43_arch_lwip_threadsafe_background
         )
 
-pico_add_extra_outputs(autonomous-drive_test)
+pico_add_extra_outputs(threading_test)
 
