@@ -204,3 +204,4 @@ testing/uart_advanced/.vscode/extensions.json
 testing/uart_advanced/.vscode/launch.json
 testing/uart_advanced/.vscode/settings.json
 testing/uart_advanced/.vscode/tasks.json
+Pico/.vscode/settings.json

@@ -50,27 +50,27 @@ int main()
                 cmd_chr = uart_getc(UART_ID);
                 switch (cmd_chr) {
                     case (uint8_t) 'F':
-                        setDriveSpeeds(DRIVE_SPEED, DRIVE_SPEED);
+                        //setDriveSpeeds(DRIVE_SPEED, DRIVE_SPEED);
                         printf("drive forward\n");
                         valid_cmd = 1;
                         break;
                     case (uint8_t) 'B':
-                        setDriveSpeeds(-DRIVE_SPEED, -DRIVE_SPEED);
+                        //setDriveSpeeds(-DRIVE_SPEED, -DRIVE_SPEED);
                         printf("drive backward\n");
                         valid_cmd = 1;
                         break;
                     case (uint8_t) 'L':
-                        setDriveSpeeds(-DRIVE_SPEED, DRIVE_SPEED);
+                        // setDriveSpeeds(-DRIVE_SPEED, DRIVE_SPEED);
                         printf("drive left\n");
                         valid_cmd = 1;
                         break;
                     case (uint8_t) 'R':
-                        setDriveSpeeds(DRIVE_SPEED, -DRIVE_SPEED);
+                        // setDriveSpeeds(DRIVE_SPEED, -DRIVE_SPEED);
                         printf("drive right\n");
                         valid_cmd = 1;
                         break;
                     case (uint8_t) 'S':
-                        setDriveSpeeds(0, 0);
+                        // setDriveSpeeds(0, 0);
                         printf("drive stop\n");
                         valid_cmd = 1;
                         break;
@@ -84,7 +84,7 @@ int main()
                     int8_t leftSpeedByte = uart_getc(UART_ID);
                     int8_t rightSpeedByte = uart_getc(UART_ID);
                     valid_cmd = 1;
-                    setDriveSpeeds((float) leftSpeedByte, (float) rightSpeedByte);
+                    // setDriveSpeeds((float) leftSpeedByte, (float) rightSpeedByte);
                 }
             }
         }

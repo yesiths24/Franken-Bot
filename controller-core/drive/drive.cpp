@@ -55,16 +55,14 @@ void set_motor_speed(int motor, float speed) {
             if (speed >= 0) {
                 gpio_put(DRV_PIN_A1, 0);
                 gpio_put(DRV_PIN_A2, 1);
-                pwmLevelA = (speed / 100 * DRV_PWM_MAX);
+                pwmLevelA = (speed / 100 * (DRV_PWMA_MAX-DRV_PWMA_MIN)) + DRV_PWMA_MIN;
 
             } else {
                 gpio_put(DRV_PIN_A1, 1);
                 gpio_put(DRV_PIN_A2, 0);
-                pwmLevelA = -1 * (speed / 100 * DRV_PWM_MAX);
+                pwmLevelA = -1 * ((speed / 100 * (DRV_PWMA_MAX-DRV_PWMA_MIN)) + DRV_PWMA_MIN);
             }
-            // speedFrac = abs(speed) / 100;
 
-            // short unsigned int pwmLevelA = (short unsigned int) (speedFrac * (float) ((DRV_PWM_MAX - DRV_PWM_MIN) + DRV_PWM_MIN)); 
             pwm_set_gpio_level(DRV_PIN_PWMA, pwmLevelA);
 
             break;
@@ -72,14 +70,13 @@ void set_motor_speed(int motor, float speed) {
             if (speed >= 0) {
                 gpio_put(DRV_PIN_B1, 0);
                 gpio_put(DRV_PIN_B2, 1);
-                pwmLevelB = (speed / 100 * DRV_PWM_MAX);
+                pwmLevelB = (speed / 100 * (DRV_PWMB_MAX - DRV_PWMB_MIN)) + DRV_PWMB_MIN;
             } else {
                 gpio_put(DRV_PIN_B1, 1);
                 gpio_put(DRV_PIN_B2, 0);
-                pwmLevelB = (-1 * speed / 100 * DRV_PWM_MAX);
+                pwmLevelB = -1 * ((speed / 100 * (DRV_PWMB_MAX - DRV_PWMB_MIN)) + DRV_PWMB_MIN);
             }
-            // speedFrac = abs(speed) / 100;
-            // short unsigned int pwmLevelB = (short unsigned int) (speedFrac * (float) ((DRV_PWM_MAX - DRV_PWM_MIN) + DRV_PWM_MIN));
+
             pwm_set_gpio_level(DRV_PIN_PWMB, pwmLevelB);
             break;
     }

@@ -100,6 +100,6 @@ void setMotorSpeed(int motor, float speed) {
 }
 
 void setDriveSpeeds(float left, float right) {
-    setMotorSpeed(0, left);
-    setMotorSpeed(1, right);
+    setMotorSpeed(1, left);
+    setMotorSpeed(0, right);
 }
