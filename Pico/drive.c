@@ -58,7 +58,7 @@ void initDrive() {
 }
 
 void setMotorSpeed(int motor, float speed) {
-    printf("Setting motor %d to speed %f\n", motor, speed);
+    //printf("Setting motor %d to speed %f\n", motor, speed);
     short unsigned int pwmLevelA, pwmLevelB;
     float speedFrac;
     switch(motor) {
@@ -76,7 +76,7 @@ void setMotorSpeed(int motor, float speed) {
             // speedFrac = abs(speed) / 100;
 
             // short unsigned int pwmLevelA = (short unsigned int) (speedFrac * (float) ((PWM_MAX - PWM_MIN) + PWM_MIN)); 
-            printf("Setting PWM %d to level %d\n", motor, pwmLevelA);
+            //printf("Setting PWM %d to level %d\n", motor, pwmLevelA);
             pwm_set_gpio_level(PIN_PWMA, pwmLevelA);
 
             break;
@@ -92,14 +92,12 @@ void setMotorSpeed(int motor, float speed) {
             }
             // speedFrac = abs(speed) / 100;
             // short unsigned int pwmLevelB = (short unsigned int) (speedFrac * (float) ((PWM_MAX - PWM_MIN) + PWM_MIN));
-            printf("Setting PWM %d to level %d\n", motor, pwmLevelB);
             pwm_set_gpio_level(PIN_PWMB, pwmLevelB);
             break;
     }
 }
 
 void setDriveSpeeds(float left, float right) {
-    printf("setting drives to %f, %f\n", left, right);
     setMotorSpeed(0, left);
     setMotorSpeed(1, right);
 }

@@ -1,5 +1,7 @@
 package com.example.frankenbotapp;
 
+import com.example.frankenbotapp.TcpClient;
+
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
@@ -7,8 +9,6 @@ import java.util.Arrays;
 
 public class DataPacket {
     private static final int COMMAND_SIZE = 5;
-    private static final int MESSAGE_SIZE = 20;
-
     private String command;
     private String message;
 
@@ -18,26 +18,35 @@ public class DataPacket {
     }
 
     public byte[] toBytes() {
-        ByteBuffer buffer = ByteBuffer.allocate(COMMAND_SIZE + MESSAGE_SIZE);
-        buffer.order(ByteOrder.LITTLE_ENDIAN); // Match C struct order
-
-        // Convert command to fixed-size array
         byte[] commandBytes = command.getBytes(StandardCharsets.UTF_8);
-        byte[] commandFixedSize = new byte[COMMAND_SIZE];
-        Arrays.fill(commandFixedSize, (byte) 0);
-        System.arraycopy(commandBytes, 0, commandFixedSize, 0,
-                Math.min(commandBytes.length, COMMAND_SIZE));
+        byte[] commandFixed = new byte[COMMAND_SIZE];
+        Arrays.fill(commandFixed, (byte) 0);
+        System.arraycopy(commandBytes, 0, commandFixed, 0, Math.min(commandBytes.length, COMMAND_SIZE));
 
-        // Convert message to fixed-size array
         byte[] messageBytes = message.getBytes(StandardCharsets.UTF_8);
-        byte[] messageFixedSize = new byte[MESSAGE_SIZE];
-        Arrays.fill(messageFixedSize, (byte) 0);
-        System.arraycopy(messageBytes, 0, messageFixedSize, 0,
-                Math.min(messageBytes.length, MESSAGE_SIZE));
 
-        buffer.put(commandFixedSize);  // Add command
-        buffer.put(messageFixedSize);  // Add message
+        ByteBuffer buffer = ByteBuffer.allocate(COMMAND_SIZE + messageBytes.length);
+        buffer.put(commandFixed);
+        buffer.put(messageBytes);
 
         return buffer.array();
     }
+
+    public static DataPacket fromBytes(byte[] data) {
+        ByteBuffer buffer = ByteBuffer.wrap(data);
+        buffer.order(ByteOrder.LITTLE_ENDIAN);
+
+        int commandLength = buffer.getInt();
+
+        byte[] commandBytes = new byte[commandLength];
+        buffer.get(commandBytes);
+        String command = new String(commandBytes, StandardCharsets.UTF_8);
+
+        byte[] messageBytes = new byte[data.length - 4 - commandLength];
+        buffer.get(messageBytes);
+        String message = new String(messageBytes, StandardCharsets.UTF_8);
+
+        return new DataPacket(command, message);
+    }
+
 }
