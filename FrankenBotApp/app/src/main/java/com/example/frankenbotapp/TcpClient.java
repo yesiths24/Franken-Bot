@@ -1,10 +1,13 @@
 package com.example.frankenbotapp;
 
+import android.widget.TextView;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.nio.ByteBuffer;
 
 public class TcpClient {
     private static TcpClient instance;
@@ -69,6 +72,36 @@ public class TcpClient {
             e.printStackTrace();
         }
         return null;
+    }
+
+    public byte[] receiveImageBytes() throws IOException {
+        if (inputStream == null) return null;
+
+        // Read exactly 4 bytes for the image length
+        byte[] lengthBytes = readFully(4);
+        if (lengthBytes == null) throw new IOException("Failed to read image length");
+
+        int length = ByteBuffer.wrap(lengthBytes).getInt();
+
+        // Read the full image based on length
+        byte[] imageBytes = readFully(length);
+        if (imageBytes == null) throw new IOException("Failed to read full image");
+
+        return imageBytes;
+    }
+
+    /**
+     * Reads exactly `len` bytes from the input stream, handling partial reads.
+     */
+    private byte[] readFully(int len) throws IOException {
+        byte[] buffer = new byte[len];
+        int totalRead = 0;
+        while (totalRead < len) {
+            int read = inputStream.read(buffer, totalRead, len - totalRead);
+            if (read == -1) return null;  // End of stream
+            totalRead += read;
+        }
+        return buffer;
     }
 
     public void disconnect() {

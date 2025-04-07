@@ -18,8 +18,7 @@
         app:JV_fixedCenter="false"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toStartOf="@+id/textView1"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/playerView1" />
+        app:layout_constraintStart_toStartOf="parent" />
 
     <io.github.controlwear.virtual.joystick.android.JoystickView
         android:id="@+id/joystick2"
@@ -34,8 +33,7 @@
         app:JV_fixedCenter="false"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toEndOf="@+id/textView1"
-        app:layout_constraintTop_toBottomOf="@+id/playerView1" />
+        app:layout_constraintStart_toEndOf="@+id/textView1" />
 
     <TextView
         android:id="@+id/textView1"
@@ -44,19 +42,21 @@
         android:text="TextView"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/playerView1" />
+        app:layout_constraintStart_toStartOf="parent" />
 
-    <androidx.media3.ui.PlayerView
-        android:id="@+id/playerView1"
-        android:layout_width="584dp"
-        android:layout_height="314dp"
-        app:layout_constraintBottom_toBottomOf="parent"
+    <ImageView
+        android:id="@+id/imageView1"
+        android:layout_width="327dp"
+        android:layout_height="278dp"
+        android:layout_marginStart="32dp"
+        android:layout_marginEnd="32dp"
+        app:layout_constraintBottom_toBottomOf="@+id/textView1"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent"
+        app:srcCompat="@android:drawable/presence_video_busy" />
 
-<!--    <SeekBar-->
+    <!--    <SeekBar-->
 <!--        android:id="@+id/seekBar1"-->
 <!--        android:layout_width="wrap_content"-->
 <!--        android:layout_height="0dp"-->

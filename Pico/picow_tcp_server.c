@@ -10,12 +10,18 @@
 
 #include "packet.h"
 #include "commands.c"
+#include "example.c"
 
 #define TCP_PORT 1234
 #define DEBUG_printf printf
 #define POLL_TIME_S 5
 #define COMMAND_SIZE 5
 #define MAX_MESSAGE_SIZE 256 // Optional, limit for safety
+#define STREAM_INTERVAL_MS 1000
+#define CHUNK_SIZE 512
+
+
+#define IMAGE_SIZE (sizeof(fake_jpeg_data))
 
 typedef struct TCP_SERVER_T_ {
     struct tcp_pcb *server_pcb;
@@ -23,6 +29,9 @@ typedef struct TCP_SERVER_T_ {
     bool complete;
 } TCP_SERVER_T;
 
+struct tcp_pcb *tpcb1;
+int streaming = 0;  // Flag to indicate if streaming is active//paused//stopped
+static size_t jpeg_offset = 0;
 
 static TCP_SERVER_T* tcp_server_init(void) {
     TCP_SERVER_T *state = calloc(1, sizeof(TCP_SERVER_T));
@@ -123,6 +132,7 @@ static err_t tcp_server_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, er
     return ERR_OK;
 }
 
+err_t send_image_routine(struct tcp_pcb *tpcb);
 
 static err_t tcp_server_accept(void *arg, struct tcp_pcb *client_pcb, err_t err) {
     TCP_SERVER_T *state = (TCP_SERVER_T*)arg;
@@ -139,7 +149,7 @@ static err_t tcp_server_accept(void *arg, struct tcp_pcb *client_pcb, err_t err)
     tcp_err(client_pcb, NULL);
 
     // Send "Hello" message upon connection
-    return tcp_server_send_hello(arg, state->client_pcb);
+    return send_image_routine(client_pcb); // Send image data
 }
 
 static bool tcp_server_open(void *arg) {
@@ -174,9 +184,11 @@ static bool tcp_server_open(void *arg) {
 void run_tcp_server(void) {
     TCP_SERVER_T *state = tcp_server_init();
     if (!state) {
+        streaming = 2;
         return;
     }
     if (!tcp_server_open(state)) {
+        streaming = 2;
         tcp_server_result(state, -1);
         return;
     }
@@ -188,6 +200,75 @@ void run_tcp_server(void) {
         sleep_ms(1000);
 #endif
     }
+    streaming = 2; // Stop streaming
     free(state);
 }
 
+err_t tcp_server_send_image();
+static int64_t stream_image_callback(alarm_id_t id, void *user_data) {
+    // This function will be called every STREAM_INTERVAL_MS milliseconds
+
+    if (streaming == 0) {
+        printf("Streaming image data...\n");
+        tcp_server_send_image(fake_jpeg_data, tpcb1); // Send the image data
+        add_alarm_in_ms(STREAM_INTERVAL_MS, stream_image_callback, NULL, true);
+        
+    } else if (streaming == 1) {
+        printf("Streaming is paused.\n");
+        add_alarm_in_ms(STREAM_INTERVAL_MS, stream_image_callback, NULL, true);
+    } else if (streaming == 2) {
+        printf("Streaming is stopped.\n");
+        return -1; // Stop the alarm
+    }   
+
+    return 0;  // Return 0 to indicate success
+}
+
+err_t send_image_routine(struct tcp_pcb *tpcb) {
+    tpcb1 = tpcb; // Store the client PCB for sending images later
+    add_alarm_in_ms(STREAM_INTERVAL_MS, stream_image_callback, NULL, true); // Start streaming images
+    return ERR_OK;
+}
+
+err_t send_next_chunk(struct tcp_pcb *tpcb, uint8_t *img) {
+    size_t remaining = IMAGE_SIZE - jpeg_offset;
+    if (remaining == 0) return ERR_OK;
+
+    size_t to_send = remaining > CHUNK_SIZE ? CHUNK_SIZE : remaining;
+
+    err_t err = tcp_write(tpcb, &fake_jpeg_data[jpeg_offset], to_send, TCP_WRITE_FLAG_COPY);
+    if (err != ERR_OK) {
+        printf("Chunk send error: %d\n", err);
+        return err;
+    }
+
+    jpeg_offset += to_send;
+    return tcp_output(tpcb);  // Push it
+}
+
+err_t tcp_server_send_image(uint8_t *img, struct tcp_pcb *tpcb) {
+    if (!tpcb) return ERR_VAL;
+
+    // Send image size as 4-byte big-endian integer
+    uint32_t size_be = htonl(IMAGE_SIZE);  // convert to network byte order
+    err_t err = tcp_write(tpcb, &size_be, sizeof(size_be), TCP_WRITE_FLAG_COPY);
+    if (err != ERR_OK) {
+        printf("Failed to send image size: %d\n", err);
+        return err;
+    } if (err == ERR_CONN) {
+        printf("Connection closed: %d\n", err);
+        streaming = 2; // Stop streaming
+        return err;
+    }
+
+    // Send the actual image data
+    jpeg_offset = 0;
+    while (jpeg_offset < IMAGE_SIZE) {
+        send_next_chunk(tpcb, img);
+        printf("%d", jpeg_offset);
+    } 
+    return ERR_OK;
+
+    // Flush buffer
+    return tcp_output(tpcb);
+}
