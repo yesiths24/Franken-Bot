@@ -7,9 +7,12 @@ import androidx.media3.exoplayer.ExoPlayer;
 import androidx.media3.ui.PlayerView;
 
 import android.content.pm.ActivityInfo;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -27,6 +30,9 @@ public class ManualActivity extends AppCompatActivity {
     private volatile int rightjoystickStrength = 0;
     private volatile boolean isSending = true;
     private volatile boolean isStopped = false;
+    private final ExecutorService streamExecutor = Executors.newSingleThreadExecutor();
+    private final Handler uiHandler = new Handler(Looper.getMainLooper());
+    private TcpClient tcpClient = TcpClient.getInstance();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -50,6 +56,7 @@ public class ManualActivity extends AppCompatActivity {
                 } else {
                     leftjoystickStrength = -strength;
                 }
+                textView1.setText(String.format(Locale.CANADA, "%d,%d", leftjoystickStrength, rightjoystickStrength));
             }
         },100);
 
@@ -61,25 +68,14 @@ public class ManualActivity extends AppCompatActivity {
                 } else {
                     rightjoystickStrength = -strength;
                 }
+                textView1.setText(String.format(Locale.CANADA, "%d,%d", leftjoystickStrength, rightjoystickStrength));
             }
         },100);
 
 
 
-        PlayerView playerView = (PlayerView) findViewById(R.id.playerView1);
-        Player player = new ExoPlayer.Builder(this).build();
-        playerView.setPlayer(player);
-        try {
-            MediaItem mediaItem = MediaItem.fromUri("rtsp://192.168.1.69:8554/test");
-            player.setMediaItem(mediaItem);
-            player.prepare();
-            player.play();
-        } catch (Exception e) {
-            e.printStackTrace();
-            showToast("Error: " + e.getMessage());
-        }
-
         startJoystickSender();
+        startImageStream();
     }
     private void startJoystickSender() {
         executorService.execute(() -> {
@@ -104,7 +100,7 @@ public class ManualActivity extends AppCompatActivity {
                 message = String.format(Locale.CANADA, "%d,%d", left, right);
 
                 DataPacket dataPacket = new DataPacket(command, message);
-                boolean isSent = TcpClient.getInstance().sendPacket(dataPacket.toBytes());
+                boolean isSent = tcpClient.sendPacket(dataPacket.toBytes());
 
                 if (!isSent) {
                     mainHandler.post(() -> showToast("Failed to send data"));
@@ -119,16 +115,22 @@ public class ManualActivity extends AppCompatActivity {
         });
     }
 
-    /**
-     * Sends the joystick angle and strength to the TCP server (Pico W).
-     */
-    private void sendTcpPacket(String command, String message) {
-
-        executorService.execute(() -> {
-            DataPacket dataPacket = new DataPacket(command, message);
-            boolean isSent = TcpClient.getInstance().sendPacket(dataPacket.toBytes());
-            if (!isSent) {
-                mainHandler.post(() -> showToast("Failed to send data"));
+    private void startImageStream() {
+        streamExecutor.execute(() -> {
+            ImageView imageView1 = findViewById(R.id.imageView1);
+            try {
+                while (true) {
+                    byte[] imageData = tcpClient.receiveImageBytes(); // Implement this method
+                    if (imageData != null && imageData.length > 0) {
+                        Bitmap bitmap = BitmapFactory.decodeByteArray(imageData, 0, imageData.length);
+                        if (bitmap != null) {
+                            uiHandler.post(() -> imageView1.setImageBitmap(bitmap));
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+                uiHandler.post(() -> showToast("Image stream error: " + e.getMessage()));
             }
         });
     }

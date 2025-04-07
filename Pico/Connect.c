@@ -24,7 +24,8 @@ int main() {
     initDrive();
     
     sleep_ms(5000);
-    start_hotspot();
+    start_hotspot();   
+
 
     while(1) {
         run_tcp_server();
