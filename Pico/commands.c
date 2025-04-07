@@ -4,19 +4,18 @@
 #include <math.h>
 #include "drive.c"
 
-void process_command(Data *data) {
-    if (strcmp(data->command, "drv") == 0) {
-        printf("Moving to %s\n", data->message);
+void process_command(char *command, char *message) {
+    if (strcmp(command, "drv") == 0) {
 
         float left, right;
         
-        sscanf(data->message, "%f,%f",&left, &right);
+        sscanf(message, "%f,%f",&left, &right);
         
         setDriveSpeeds(left, right);
 
         
 
-    } else if (strcmp(data->command, "Stop") == 0) {
+    } else if (strcmp(command, "stop") == 0) {
         printf("Stopping\n");
     } else {
         printf("Unknown command\n");

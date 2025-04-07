@@ -14,6 +14,8 @@
 #define TCP_PORT 1234
 #define DEBUG_printf printf
 #define POLL_TIME_S 5
+#define COMMAND_SIZE 5
+#define MAX_MESSAGE_SIZE 256 // Optional, limit for safety
 
 typedef struct TCP_SERVER_T_ {
     struct tcp_pcb *server_pcb;
@@ -83,29 +85,44 @@ err_t tcp_server_send_hello(void *arg, struct tcp_pcb *tpcb) {
     return ERR_OK;
 }
 
+
+
 static err_t tcp_server_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err) {
     if (!p) {
         return tcp_close(tpcb);
     }
 
-    if (p->tot_len == sizeof(Data)) {  // Ensure correct struct size
-        Data receivedData;
-        pbuf_copy_partial(p, &receivedData, sizeof(Data), 0);
+    if (p->tot_len < COMMAND_SIZE) {
+        // Not enough data to contain a full command
+        pbuf_free(p);
+        return ERR_OK;
+    }
+    
 
-        // Ensure strings are null-terminated
-        receivedData.command[COMMAND_SIZE - 1] = '\0';
-        receivedData.message[MESSAGE_SIZE - 1] = '\0';
+    char command[COMMAND_SIZE + 1] = {0};  // +1 for null-termination
+    char message[MAX_MESSAGE_SIZE] = {0}; // Adjust based on expected limits
 
-        printf("Received Data: Command=%s, Message=%s\n", 
-               receivedData.command, receivedData.message);
-        process_command(&receivedData);
+    // Copy command (first 5 bytes)
+    pbuf_copy_partial(p, command, COMMAND_SIZE, 0);
+    command[COMMAND_SIZE] = '\0';
+
+    // Copy remaining data as message
+    uint16_t message_len = p->tot_len - COMMAND_SIZE;
+    if (message_len > 0) {
+        pbuf_copy_partial(p, message, 
+            message_len < MAX_MESSAGE_SIZE ? message_len : MAX_MESSAGE_SIZE - 1,
+            COMMAND_SIZE);
+        message[message_len < MAX_MESSAGE_SIZE ? message_len : MAX_MESSAGE_SIZE - 1] = '\0';
     }
 
-    
+    printf("Received Data: Command=%s, Message=%s\n", command, message);
+
+    process_command(command, message);  // You’ll pass both as strings now
 
     pbuf_free(p);
     return ERR_OK;
 }
+
 
 static err_t tcp_server_accept(void *arg, struct tcp_pcb *client_pcb, err_t err) {
     TCP_SERVER_T *state = (TCP_SERVER_T*)arg;

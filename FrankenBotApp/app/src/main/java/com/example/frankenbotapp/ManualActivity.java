@@ -23,8 +23,10 @@ import io.github.controlwear.virtual.joystick.android.JoystickView;
 public class ManualActivity extends AppCompatActivity {
     private final ExecutorService executorService = Executors.newSingleThreadExecutor();
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
-    private static final long MIN_SEND_INTERVAL_MS = 500; // Minimum 500ms between sends
-    private long lastSentTime = 0; // Track last send time
+    private volatile int leftjoystickStrength = 0;
+    private volatile int rightjoystickStrength = 0;
+    private volatile boolean isSending = true;
+    private volatile boolean isStopped = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -43,68 +45,26 @@ public class ManualActivity extends AppCompatActivity {
         leftStick.setOnMoveListener(new JoystickView.OnMoveListener() {
             @Override
             public void onMove(int angle, int strength) {
-                int leftMotorSpeed = 2*(50 - leftStick.getNormalizedY());
-                int rightMotorSpeed = 2*(50 - rightStick.getNormalizedY());
-
-                String message = String.format(Locale.CANADA, "%d,%d", leftMotorSpeed, rightMotorSpeed);
-                textView1.setText(message);
-                sendTcpPacket("drv", message);
+                if (angle == 90) {
+                    leftjoystickStrength    = strength;
+                } else {
+                    leftjoystickStrength = -strength;
+                }
             }
-        });
+        },100);
 
         rightStick.setOnMoveListener(new JoystickView.OnMoveListener() {
             @Override
             public void onMove(int angle, int strength) {
-                int leftMotorSpeed = 2*(50 - leftStick.getNormalizedY());
-                int rightMotorSpeed = 2*(50 - rightStick.getNormalizedY());
-
-                String message = String.format(Locale.CANADA, "%d,%d", leftMotorSpeed, rightMotorSpeed);
-                textView1.setText(message);
-                sendTcpPacket("drv", message);
+                if (angle == 90) {
+                    rightjoystickStrength = strength;
+                } else {
+                    rightjoystickStrength = -strength;
+                }
             }
-        });
-//
-//        leftStick.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-//            @Override
-//            public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
-//                String message = String.format(Locale.CANADA, "%d,%d", i-100, rightStick.getProgress()-100);
-//                textView1.setText(message);
-//                sendTcpPacket("drv", message);
-//            }
-//
-//            @Override
-//            public void onStartTrackingTouch(SeekBar seekBar) {
-//            }
-//
-//            @Override
-//            public void onStopTrackingTouch(SeekBar seekBar) {
-//                seekBar.setProgress(100);
-//                String message = String.format(Locale.CANADA, "%d,%d", 0, rightStick.getProgress()-100);
-//                textView1.setText(message);
-//                sendTcpPacket("drv", message);
-//            }
-//        });
-//
-//        rightStick.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-//            @Override
-//            public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
-//                String message = String.format(Locale.CANADA, "%d,%d", leftStick.getProgress()-100, i-100);
-//                textView1.setText(message);
-//                sendTcpPacket("drv", message);
-//            }
-//
-//            @Override
-//            public void onStartTrackingTouch(SeekBar seekBar) {
-//            }
-//
-//            @Override
-//            public void onStopTrackingTouch(SeekBar seekBar) {
-//                seekBar.setProgress(100);
-//                String message = String.format(Locale.CANADA, "%d,%d", leftStick.getProgress()-100, 0);
-//                textView1.setText(message);
-//                sendTcpPacket("drv", message);
-//            }
-//        });
+        },100);
+
+
 
         PlayerView playerView = (PlayerView) findViewById(R.id.playerView1);
         Player player = new ExoPlayer.Builder(this).build();
@@ -118,18 +78,51 @@ public class ManualActivity extends AppCompatActivity {
             e.printStackTrace();
             showToast("Error: " + e.getMessage());
         }
+
+        startJoystickSender();
     }
+    private void startJoystickSender() {
+        executorService.execute(() -> {
+            while (isSending) {
+                String command;
+                String message;
+
+                int left = leftjoystickStrength;
+                int right = rightjoystickStrength;
+
+                if (left == 0 && right == 0) {
+                    if (isStopped) {
+                        continue;  // Skip sending if already stopped
+                    }
+                    command = "stop";
+                    isStopped = true;
+                } else {
+                    command = "drv";
+                    isStopped = false;
+                }
+
+                message = String.format(Locale.CANADA, "%d,%d", left, right);
+
+                DataPacket dataPacket = new DataPacket(command, message);
+                boolean isSent = TcpClient.getInstance().sendPacket(dataPacket.toBytes());
+
+                if (!isSent) {
+                    mainHandler.post(() -> showToast("Failed to send data"));
+                }
+
+                try {
+                    Thread.sleep(500);  // 500ms delay
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+        });
+    }
+
     /**
      * Sends the joystick angle and strength to the TCP server (Pico W).
      */
     private void sendTcpPacket(String command, String message) {
-        long currentTime = System.currentTimeMillis();
-
-        if (currentTime - lastSentTime < MIN_SEND_INTERVAL_MS) {
-            return; // Skip sending if not enough time has passed
-        }
-
-        lastSentTime = currentTime; // Update last send time
 
         executorService.execute(() -> {
             DataPacket dataPacket = new DataPacket(command, message);
