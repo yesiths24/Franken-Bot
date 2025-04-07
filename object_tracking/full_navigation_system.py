@@ -1,5 +1,5 @@
 import object_tracking
-import navigation
+
 from huskylib import HuskyLensLibrary
 import time
 
@@ -26,10 +26,10 @@ def menu():
             try:
                 print(object_tracking.track(hl))
             except RuntimeError as e:
-                navigation.navigate()
+                print("navigating")
             time.sleep(0.1)
 
     elif user_mode == 3:
-        navigation.navigate()
+        print("Navigating")
 
 menu()
