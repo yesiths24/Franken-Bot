@@ -4,6 +4,7 @@
 #include "pico/cyw43_arch.h"
 #include "lwip/tcp.h"
 #include "picow_tcp_server.c"
+#include "pico/multicore.h"
 
 #define WIFI_SSID "PicoW_Hotspot"
 #define WIFI_PASSWORD "12345678"
@@ -19,13 +20,21 @@ void start_hotspot() {
     printf("Hotspot '%s' started!\n", WIFI_SSID);
 }
 
+
+void hello() {
+    while (1) {
+        sleep_ms(1000);
+        printf("Hello from core 1!\n");
+    }
+}
+
+
 int main() {
     stdio_init_all();
     initDrive();
     
     sleep_ms(5000);
     start_hotspot();   
-
 
     while(1) {
         run_tcp_server();

@@ -11,6 +11,7 @@
 #include "packet.h"
 #include "commands.c"
 #include "example.c"
+#include "video_C_JAS.cpp"
 
 #define TCP_PORT 1234
 #define DEBUG_printf printf
@@ -78,29 +79,15 @@ static err_t tcp_server_result(void *arg, int status) {
     return tcp_server_close(arg);
 }
 
-// Send a "Hello" message to the client
-err_t tcp_server_send_hello(void *arg, struct tcp_pcb *tpcb) {
-    const char *message = "Hello from Pico W!\n";
-    
-    DEBUG_printf("Sending message to client: %s", message);
-    cyw43_arch_lwip_check();
-    
-    err_t err = tcp_write(tpcb, message, strlen(message), TCP_WRITE_FLAG_COPY);
-    if (err != ERR_OK) {
-        DEBUG_printf("Failed to send message: %d\n", err);
-        return tcp_server_result(arg, -1);
-    }
-    tcp_output(tpcb);  // Ensure data is flushed
-    return ERR_OK;
-}
 
 
 
 static err_t tcp_server_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err) {
     if (!p) {
-        return tcp_close(tpcb);
+        printf("Client disconnected\n");
+        tcp_server_result(arg, 0);  // Or some status if needed
+        return ERR_OK;
     }
-
     if (p->tot_len < COMMAND_SIZE) {
         // Not enough data to contain a full command
         pbuf_free(p);
@@ -132,7 +119,6 @@ static err_t tcp_server_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, er
     return ERR_OK;
 }
 
-err_t send_image_routine(struct tcp_pcb *tpcb);
 
 static err_t tcp_server_accept(void *arg, struct tcp_pcb *client_pcb, err_t err) {
     TCP_SERVER_T *state = (TCP_SERVER_T*)arg;
@@ -149,7 +135,7 @@ static err_t tcp_server_accept(void *arg, struct tcp_pcb *client_pcb, err_t err)
     tcp_err(client_pcb, NULL);
 
     // Send "Hello" message upon connection
-    return send_image_routine(client_pcb); // Send image data
+    return ERR_OK; // Send image data
 }
 
 static bool tcp_server_open(void *arg) {
@@ -181,18 +167,25 @@ static bool tcp_server_open(void *arg) {
     return true;
 }
 
+void stream(TCP_SERVER_T *state) {
+    if (state->client_pcb == NULL) {
+        return; // No active connection, don't stream
+    }
+    stream_main();
+}
+
 void run_tcp_server(void) {
     TCP_SERVER_T *state = tcp_server_init();
     if (!state) {
-        streaming = 2;
         return;
     }
     if (!tcp_server_open(state)) {
-        streaming = 2;
+
         tcp_server_result(state, -1);
         return;
     }
     while (!state->complete) {
+        stream(state);
 #if PICO_CYW43_ARCH_POLL
         cyw43_arch_poll();
         cyw43_arch_wait_for_work_until(make_timeout_time_ms(1000));
@@ -200,75 +193,9 @@ void run_tcp_server(void) {
         sleep_ms(1000);
 #endif
     }
-    streaming = 2; // Stop streaming
     free(state);
 }
 
-err_t tcp_server_send_image();
-static int64_t stream_image_callback(alarm_id_t id, void *user_data) {
-    // This function will be called every STREAM_INTERVAL_MS milliseconds
 
-    if (streaming == 0) {
-        printf("Streaming image data...\n");
-        tcp_server_send_image(fake_jpeg_data, tpcb1); // Send the image data
-        add_alarm_in_ms(STREAM_INTERVAL_MS, stream_image_callback, NULL, true);
-        
-    } else if (streaming == 1) {
-        printf("Streaming is paused.\n");
-        add_alarm_in_ms(STREAM_INTERVAL_MS, stream_image_callback, NULL, true);
-    } else if (streaming == 2) {
-        printf("Streaming is stopped.\n");
-        return -1; // Stop the alarm
-    }   
 
-    return 0;  // Return 0 to indicate success
-}
 
-err_t send_image_routine(struct tcp_pcb *tpcb) {
-    tpcb1 = tpcb; // Store the client PCB for sending images later
-    add_alarm_in_ms(STREAM_INTERVAL_MS, stream_image_callback, NULL, true); // Start streaming images
-    return ERR_OK;
-}
-
-err_t send_next_chunk(struct tcp_pcb *tpcb, uint8_t *img) {
-    size_t remaining = IMAGE_SIZE - jpeg_offset;
-    if (remaining == 0) return ERR_OK;
-
-    size_t to_send = remaining > CHUNK_SIZE ? CHUNK_SIZE : remaining;
-
-    err_t err = tcp_write(tpcb, &fake_jpeg_data[jpeg_offset], to_send, TCP_WRITE_FLAG_COPY);
-    if (err != ERR_OK) {
-        printf("Chunk send error: %d\n", err);
-        return err;
-    }
-
-    jpeg_offset += to_send;
-    return tcp_output(tpcb);  // Push it
-}
-
-err_t tcp_server_send_image(uint8_t *img, struct tcp_pcb *tpcb) {
-    if (!tpcb) return ERR_VAL;
-
-    // Send image size as 4-byte big-endian integer
-    uint32_t size_be = htonl(IMAGE_SIZE);  // convert to network byte order
-    err_t err = tcp_write(tpcb, &size_be, sizeof(size_be), TCP_WRITE_FLAG_COPY);
-    if (err != ERR_OK) {
-        printf("Failed to send image size: %d\n", err);
-        return err;
-    } if (err == ERR_CONN) {
-        printf("Connection closed: %d\n", err);
-        streaming = 2; // Stop streaming
-        return err;
-    }
-
-    // Send the actual image data
-    jpeg_offset = 0;
-    while (jpeg_offset < IMAGE_SIZE) {
-        send_next_chunk(tpcb, img);
-        printf("%d", jpeg_offset);
-    } 
-    return ERR_OK;
-
-    // Flush buffer
-    return tcp_output(tpcb);
-}

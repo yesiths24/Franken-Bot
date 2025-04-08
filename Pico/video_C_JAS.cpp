@@ -215,7 +215,7 @@ void send_image_over_usb(const std::vector<uint8_t>& image_data) {
     printf("---END-IMAGE---\n");
 }
 
-
+/*
 
 //---------------------------------------------------------
 // MAIN
@@ -240,5 +240,9 @@ int main() {
     }
 
     while (1) sleep_ms(1000);
+}*/
+
+void stream_main() {
+    printf("Starting...\n");
 }
 
