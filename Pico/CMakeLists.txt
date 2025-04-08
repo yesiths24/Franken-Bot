@@ -51,6 +51,7 @@ target_link_libraries(Connect
         hardware_adc
         hardware_pwm
         hardware_clocks
+        pico_multicore
         )
 
 # Add the standard include files to the build
