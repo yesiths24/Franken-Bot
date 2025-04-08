@@ -76,30 +76,41 @@ public class TcpClient {
     }
 
     public byte[] receiveImageBytes() throws IOException {
-        if (inputStream == null) return null;
+        if (inputStream == null) {
+            throw new IOException("InputStream is null");
+        }
 
-        // Step 1: Read 4-byte length
+        // Step 1: Read the 4-byte image length prefix (big-endian)
         byte[] lengthBuffer = new byte[4];
-        int read = inputStream.read(lengthBuffer);
-        if (read < 4) throw new IOException("Failed to read image length");
+        int readLen = 0;
+        while (readLen < 4) {
+            int bytesRead = inputStream.read(lengthBuffer, readLen, 4 - readLen);
+            if (bytesRead == -1) throw new IOException("Stream closed while reading image length");
+            readLen += bytesRead;
+        }
 
-        int length = ((lengthBuffer[0] & 0xFF) << 24) |
+        int imageLength = ((lengthBuffer[0] & 0xFF) << 24) |
                 ((lengthBuffer[1] & 0xFF) << 16) |
                 ((lengthBuffer[2] & 0xFF) << 8) |
                 (lengthBuffer[3] & 0xFF);
 
-        // Step 2: Read the image bytes
-        byte[] imageData = new byte[length];
+        if (imageLength <= 0 || imageLength > 1024 * 1024) { // Sanity check: max 1MB
+            throw new IOException("Invalid image length: " + imageLength);
+        }
+
+        // Step 2: Read the image data
+        byte[] imageData = new byte[imageLength];
         int totalRead = 0;
 
-        while (totalRead < length) {
-            int bytesRead = inputStream.read(imageData, totalRead, length - totalRead);
-            if (bytesRead == -1) throw new IOException("Stream closed early");
+        while (totalRead < imageLength) {
+            int bytesRead = inputStream.read(imageData, totalRead, imageLength - totalRead);
+            if (bytesRead == -1) throw new IOException("Stream closed while reading image data");
             totalRead += bytesRead;
         }
 
         return imageData;
     }
+
 
 
 

@@ -32,7 +32,6 @@ void hello() {
 int main() {
     stdio_init_all();
     initDrive();
-    
     sleep_ms(5000);
     start_hotspot();   
 
