@@ -131,6 +131,8 @@ public class ManualActivity extends AppCompatActivity {
             } catch (Exception e) {
                 e.printStackTrace();
                 uiHandler.post(() -> showToast("Image stream error: " + e.getMessage()));
+                TextView textView1 = (TextView) findViewById(R.id.textView1);
+                textView1.setText("Image stream error: " + e.getMessage());
             }
         });
     }

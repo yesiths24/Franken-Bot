@@ -123,7 +123,10 @@ static void sync_cam() {
     }
 }
 
-static void init_cam() {
+static int init_cam() {
+    uart_init(uart0, 115200); // Or 921600 if stable
+    gpio_set_function(0, GPIO_FUNC_UART); // TX
+    gpio_set_function(1, GPIO_FUNC_UART); // RX
     // 1) SYNC
     sync_cam();
 
@@ -138,6 +141,10 @@ static void init_cam() {
         uart_read_all(rx);
         printf("Init response (%d bytes): ", (int)rx.size());
         print_hex_data(rx);
+        if (rx.size() <= 0) {
+            printf("No response from camera.\n");
+            return -1;
+        }
     }
 
     // 3) SET PACKAGE SIZE: 256 bytes ("AA 06 08 00 01 00")
@@ -150,6 +157,13 @@ static void init_cam() {
         uart_read_all(rx);
         printf("Set package size response (%d bytes): ", (int)rx.size());
         print_hex_data(rx);
+        if (rx.size() <= 0) {
+            printf("No response from camera.\n");
+            return -1;
+        }
+        else  {
+            return 0;
+        }
     }
 }
 
@@ -158,7 +172,7 @@ static void init_cam() {
 // This version prints out ALL data read from the camera.
 //---------------------------------------------------------
 bool capture_frame_once(std::vector<uint8_t>& image_data) {
-    printf("\n--- Starting image capture ---\n");
+    printf("\nStarting image capture...");
 
     // Send GET PICTURE
     std::vector<uint8_t> cmd = hex_string_to_bytes("AA 04 05 00 00 00");
@@ -167,10 +181,8 @@ bool capture_frame_once(std::vector<uint8_t>& image_data) {
     // Read 12-byte header
     std::vector<uint8_t> header(12);
     uart_read_blocking(UART_ID, header.data(), header.size());
-    printf("Header: "); print_hex_data(header);
 
     uint32_t length = header[9] + (header[10] << 8) + (header[11] << 16);
-    printf("Image length: %lu bytes\n", length);
 
     image_data.clear();
     image_data.resize(length);
