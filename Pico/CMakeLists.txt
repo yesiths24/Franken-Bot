@@ -35,7 +35,7 @@ pico_sdk_init()
 
 # Add executable. Default name is the project name, version 0.1
 
-add_executable(Connect Connect.c )
+add_executable(Connect Connect.cpp )
 
 pico_set_program_name(Connect "Connect")
 pico_set_program_version(Connect "0.1")
