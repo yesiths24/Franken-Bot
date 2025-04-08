@@ -55,6 +55,7 @@ void on_uart_rx() {
                         break;
                     default:
                         printf("invalid drive command, halting!\n");
+                        setDriveSpeeds(0,0);
                 }
             } else if (cmd[0] == (uint8_t) 'M' && cmd[1] == (uint8_t) 'R' && cmd[2] == (uint8_t) 'S') {
                 int8_t leftSpeedByte = uart_getc(UART_ID);
@@ -63,6 +64,7 @@ void on_uart_rx() {
                 setDriveSpeeds((int) leftSpeedByte, (int) rightSpeedByte);
             } else {
                 printf("invalid drive command, halting!\n");
+                setDriveSpeeds(0,0);
             }
 
             cmd_chars_recv = 0;

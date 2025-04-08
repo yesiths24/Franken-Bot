@@ -15,7 +15,7 @@
 // A is RIGHT motor, B is LEFT motor
 #define PWM_A_MAX 15000
 #define PWM_A_MIN 0
-#define PWM_B_MAX 14000
+#define PWM_B_MAX 15000
 #define PWM_B_MIN 0
 
 

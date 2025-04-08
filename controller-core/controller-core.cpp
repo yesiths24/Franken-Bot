@@ -25,7 +25,7 @@ int run_manual() {
     // run manual control loop
     // this will probably be interrupted a lot
     //  because all the manual control inputs are wifi commands
-    while (state = MANUAL) {
+    while (state == MANUAL) {
         // TODO: read image data from ucam UART
 
         // TODO: send image data to phone
@@ -43,7 +43,8 @@ int run_manual() {
 }
 
 int run_auto() {
-    // wake up pi
+    // powerup pi
+    pi_powerup();
 
     // handshake w pi and send instructions
 
@@ -55,7 +56,7 @@ int run_auto() {
 
     // run autonomous loop as necessary
     // expect a shitload of interrupts (if pi5 uart has rx interrupt set up)
-    while (state = AUTO) {
+    while (state == AUTO) {
         sleep_ms(100);
     }
 

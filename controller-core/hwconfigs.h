@@ -13,6 +13,9 @@
 #define PI_UART_STOP_BITS 1
 #define PI_UART_PARITY    UART_PARITY_NONE
 
+// RPi5 J2+ Header (power on/off)
+#define PI_POWER_CTRL_PIN 14
+
 // Autonomous drive properties
 #define AUTO_DRIVE_SPEED 35
 
@@ -25,7 +28,7 @@
 #define DRV_PIN_A2 19
 #define DRV_PIN_PWMB 20
 #define DRV_PIN_PWMA 21
-#define DRV_PWMA_MAX 14000
+#define DRV_PWMA_MAX 15000
 #define DRV_PWMA_MIN 0
 #define DRV_PWMB_MAX 15000
 #define DRV_PWMB_MIN 0

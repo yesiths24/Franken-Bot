@@ -56,8 +56,16 @@ void on_pi_uart_rx() {
     }
 }
 
+void pi_powerup()
+{
+    gpio_set_dir(PI_POWER_CTRL_PIN, GPIO_OUT);
+    gpio_pull_down(PI_POWER_CTRL_PIN);
+    sleep_ms(1000);
+    gpio_set_dir(PI_POWER_CTRL_PIN, 0);
 
-int pi5_uart_setup()
+}
+
+int pi_uart_setup()
 {
     stdio_init_all();
 
