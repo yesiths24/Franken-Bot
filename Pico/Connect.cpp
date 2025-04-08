@@ -3,7 +3,7 @@
 #include "pico/stdlib.h"
 #include "pico/cyw43_arch.h"
 #include "lwip/tcp.h"
-#include "picow_tcp_server.c"
+#include "picow_tcp_server.cpp"
 #include "pico/multicore.h"
 
 #define WIFI_SSID "PicoW_Hotspot"

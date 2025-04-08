@@ -7,6 +7,7 @@
 #include "hardware/uart.h"
 #include "hardware/gpio.h"
 #include "hardware/timer.h"
+#include "pico/cyw43_arch.h"
 
 // ------------------- CONFIG -------------------
 #define UART_ID       uart0
@@ -241,8 +242,3 @@ int main() {
 
     while (1) sleep_ms(1000);
 }*/
-
-void stream_main() {
-    printf("Starting...\n");
-}
-

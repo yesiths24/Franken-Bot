@@ -2,6 +2,7 @@ package com.example.frankenbotapp;
 
 import android.widget.TextView;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -77,32 +78,31 @@ public class TcpClient {
     public byte[] receiveImageBytes() throws IOException {
         if (inputStream == null) return null;
 
-        // Read exactly 4 bytes for the image length
-        byte[] lengthBytes = readFully(4);
-        if (lengthBytes == null) throw new IOException("Failed to read image length");
+        // Step 1: Read 4-byte length
+        byte[] lengthBuffer = new byte[4];
+        int read = inputStream.read(lengthBuffer);
+        if (read < 4) throw new IOException("Failed to read image length");
 
-        int length = ByteBuffer.wrap(lengthBytes).getInt();
+        int length = ((lengthBuffer[0] & 0xFF) << 24) |
+                ((lengthBuffer[1] & 0xFF) << 16) |
+                ((lengthBuffer[2] & 0xFF) << 8) |
+                (lengthBuffer[3] & 0xFF);
 
-        // Read the full image based on length
-        byte[] imageBytes = readFully(length);
-        if (imageBytes == null) throw new IOException("Failed to read full image");
-
-        return imageBytes;
-    }
-
-    /**
-     * Reads exactly `len` bytes from the input stream, handling partial reads.
-     */
-    private byte[] readFully(int len) throws IOException {
-        byte[] buffer = new byte[len];
+        // Step 2: Read the image bytes
+        byte[] imageData = new byte[length];
         int totalRead = 0;
-        while (totalRead < len) {
-            int read = inputStream.read(buffer, totalRead, len - totalRead);
-            if (read == -1) return null;  // End of stream
-            totalRead += read;
+
+        while (totalRead < length) {
+            int bytesRead = inputStream.read(imageData, totalRead, length - totalRead);
+            if (bytesRead == -1) throw new IOException("Stream closed early");
+            totalRead += bytesRead;
         }
-        return buffer;
+
+        return imageData;
     }
+
+
+
 
     public void disconnect() {
         try {

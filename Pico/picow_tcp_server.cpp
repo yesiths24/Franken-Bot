@@ -8,6 +8,8 @@
 #include "lwip/pbuf.h"
 #include "lwip/tcp.h"
 
+#include <algorithm>
+
 #include "packet.h"
 #include "commands.c"
 #include "example.c"
@@ -35,7 +37,7 @@ int streaming = 0;  // Flag to indicate if streaming is active//paused//stopped
 static size_t jpeg_offset = 0;
 
 static TCP_SERVER_T* tcp_server_init(void) {
-    TCP_SERVER_T *state = calloc(1, sizeof(TCP_SERVER_T));
+    TCP_SERVER_T *state = (TCP_SERVER_T *)calloc(1, sizeof(TCP_SERVER_T));
     if (!state) {
         DEBUG_printf("Failed to allocate state\n");
         return NULL;
@@ -167,12 +169,79 @@ static bool tcp_server_open(void *arg) {
     return true;
 }
 
+void send_image(TCP_SERVER_T *state, const std::vector<uint8_t>& image_data) {
+    if (state->client_pcb == NULL) {
+        printf("No client connected.\n");
+        return;
+    }
+
+    uint32_t img_len = image_data.size();
+    uint8_t len_bytes[4] = {
+        (uint8_t)(img_len >> 24),
+        (uint8_t)(img_len >> 16),
+        (uint8_t)(img_len >> 8),
+        (uint8_t)(img_len)
+    };
+
+    // Send 4-byte header first
+    tcp_write(state->client_pcb, len_bytes, 4, TCP_WRITE_FLAG_COPY);
+    tcp_output(state->client_pcb);
+
+    // Then send image in chunks as before
+    const uint8_t* data = image_data.data();
+    size_t sent = 0;
+
+    while (sent < img_len) {
+        size_t space = tcp_sndbuf(state->client_pcb);
+        size_t chunk = std::min((size_t)CHUNK_SIZE, image_data.size() - sent);
+
+        if (chunk > space) {
+            sleep_ms(10);
+            continue;
+        }
+
+        err_t err = tcp_write(state->client_pcb, data + sent, chunk, TCP_WRITE_FLAG_COPY);
+        if (err != ERR_OK) {
+            printf("tcp_write failed: %d\n", err);
+            return;
+        }
+
+        tcp_output(state->client_pcb);
+        sent += chunk;
+    }
+
+    printf("Image sent successfully: %u bytes\n", img_len);
+}
+
+
 void stream(TCP_SERVER_T *state) {
     if (state->client_pcb == NULL) {
         return; // No active connection, don't stream
     }
-    stream_main();
+    uart_init(uart0, 115200); // Or 921600 if stable
+    gpio_set_function(0, GPIO_FUNC_UART); // TX
+    gpio_set_function(1, GPIO_FUNC_UART); // RX
+
+    init_cam();
+
+    std::vector<uint8_t> image;
+    if (capture_frame_once(image)) {
+        printf("Sending image over TCP...\n");
+        send_image(state, image);
+        //print the image data to the console
+        printf("Image data: ");
+        for (size_t i = 0; i < image.size(); ++i) {
+            printf("%02X ", image[i]);
+        }
+        printf("\n");
+        printf("Done!\n");
+    } else {
+        printf("Capture failed.\n");
+    }
+    
+    while (1) sleep_ms(1000);
 }
+
 
 void run_tcp_server(void) {
     TCP_SERVER_T *state = tcp_server_init();
@@ -195,7 +264,6 @@ void run_tcp_server(void) {
     }
     free(state);
 }
-
 
 
 
