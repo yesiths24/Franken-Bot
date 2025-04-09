@@ -220,43 +220,102 @@ void send_image(TCP_SERVER_T *state, const std::vector<uint8_t>& image_data) {
     printf("Image sent successfully: %u bytes\n", img_len);
 }
 
+/*********************************************************************
+ *  capture_frame_and_stream()
+ *  --------------------------
+ *  Captures a single JPEG from the camera **and** pushes it out on
+ *  the already‑connected TCP socket, packet by packet.
+ *
+ *  – Uses at most 256 bytes of RAM for buffering.
+ *  – Returns true on success, false on any protocol/length error.
+ *********************************************************************/
+bool capture_frame_and_stream(TCP_SERVER_T *state)
+{
+    if (state->client_pcb == nullptr) return false;   // no client
 
-void stream(TCP_SERVER_T *state) {
-    if (state->client_pcb == NULL) {
-        return; // No active connection, don't stream
+    /* ---------- 1. Ask the camera for a picture ---------- */
+    static const uint8_t get_pic_cmd[] = {0xAA,0x04,0x05,0x00,0x00,0x00};
+    uart_write_blocking(UART_ID, get_pic_cmd, sizeof(get_pic_cmd));
+
+    /* ---------- 2. Read 12‑byte header ---------- */
+    uint8_t hdr[12];
+    uart_read_blocking(UART_ID, hdr, sizeof(hdr));
+
+    uint32_t length = hdr[9] | (hdr[10] << 8) | (hdr[11] << 16);
+    const uint32_t MAX_IMAGE_SIZE = 100000;           // sanity check
+    if (length == 0 || length > MAX_IMAGE_SIZE) {
+        printf("Invalid image length: %u\n", length);
+        //return false;
     }
+    printf("Image length: %u\n", length);
+
+    /* 3.  Send the size to the client (big‑endian) --------------- */
+    uint32_t be_len = htonl(length);                 // <arpa/inet.h>
+    tcp_write(state->client_pcb, &be_len, 4, TCP_WRITE_FLAG_COPY);
+    tcp_output(state->client_pcb);                   // push it out
+    /* ---------- 4. Read every 250‑byte packet and forward ---------- */
+    const uint32_t num_packets = (uint32_t)ceil(length / 250.0f);
+    uint8_t uart_buf[256];            // 4‑byte camera header + 250 payload + 2 CRC
+
+    for (uint32_t i = 0; i < num_packets; ++i)
+    {
+        /* 4.1  Ask for the i‑th packet */
+        uint8_t prompt[6] = {0xAA, 0x0E, 0x00, 0x00,
+                             uint8_t(i & 0xFF), uint8_t(i >> 8)};
+        uart_write_blocking(UART_ID, prompt, sizeof(prompt));
+
+        /* 4.2  Receive the packet */
+        if (i < num_packets - 1) {
+            uart_read_blocking(UART_ID, uart_buf, 256);
+            // bytes 0‑3 = camera header, 4‑253 = 250 payload, 254‑255 = CRC
+            tcp_write(state->client_pcb, uart_buf + 4, 250, TCP_WRITE_FLAG_COPY);
+        }
+        else {   // last packet has variable length
+            uint8_t lp_hdr[4];
+            uart_read_blocking(UART_ID, lp_hdr, 4);
+            uint16_t last_len = (lp_hdr[3] << 8) | lp_hdr[2];
+
+            // safety belt
+            if (last_len > 250) last_len = 250;
+
+            uart_read_blocking(UART_ID, uart_buf, last_len);
+            tcp_write(state->client_pcb, uart_buf, last_len, TCP_WRITE_FLAG_COPY);
+
+            // Tell camera we are done
+            uint8_t fin[6] = {0xAA,0x0E,0x00,0x00,0xF0,0xF0};
+            uart_write_blocking(UART_ID, fin, sizeof(fin));
+        }
+
+        /* 4.3  Push out pending data right away to keep the TCP window moving */
+        tcp_output(state->client_pcb);
+    }
+
+    printf("Image capture + stream complete.\n");
+    return true;
+}
+
+void stream(TCP_SERVER_T *state)
+{
+    if (state->client_pcb == NULL) return;   // no client
 
     absolute_time_t t0 = get_absolute_time();
 
-    // 1. Init camera
-    if (!init) {
-        init_cam();
-        //init = true;
-    }
-    absolute_time_t t1 = get_absolute_time();
-    printf("[Timing] Camera init took %lld ms\n", TIME_DIFF_MS(t0, t1));
+    // 1. Camera init (unchanged)
+    if (!init) { 
+        init_cam(); 
+        //init = true; 
+        }
 
-    std::vector<uint8_t> image;
-
-    // 2. Capture frame
+    // 2. Capture **and** stream in one go
     absolute_time_t t2 = get_absolute_time();
-    bool success = capture_frame_once(image);
+    bool ok = capture_frame_and_stream(state);
     absolute_time_t t3 = get_absolute_time();
-    printf("[Timing] Frame capture took %lld ms\n", TIME_DIFF_MS(t2, t3));
 
-    // 3. Send over TCP
-    if (success) {
-        absolute_time_t t4 = get_absolute_time();
-        printf("Sending image over TCP...\n");
-        send_image(state, image);
-        absolute_time_t t5 = get_absolute_time();
-        printf("Done sending!\n");
-        printf("[Timing] TCP send took %lld ms\n", TIME_DIFF_MS(t4, t5));
-    } else {
-        printf("Capture failed.\n");
-    }
+    if (!ok) printf("Capture failed.\n");
 
-    printf("[Timing] Total stream() call time: %lld ms\n", TIME_DIFF_MS(t0, get_absolute_time()));
+    printf("[Timing] capture+TCP took %lld ms\n", TIME_DIFF_MS(t2, t3));
+    printf("[Timing] Total stream() call time: %lld ms\n",
+           TIME_DIFF_MS(t0, get_absolute_time()));
 }
 
 
