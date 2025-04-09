@@ -10,10 +10,10 @@
 #include "pico/cyw43_arch.h"
 
 // ------------------- CONFIG -------------------
-#define UART_ID       uart0
+#define UART_ID       uart1
 // Adjust these pins to match your wiring:
-#define PIN_UART_TX   0
-#define PIN_UART_RX   1
+#define PIN_UART_TX   4
+#define PIN_UART_RX   5
 #define BAUD_RATE     921600
 
 //---------------------------------------------------------
@@ -88,16 +88,35 @@ static void sync_cam() {
     float wait_ms = 5.0f;
     const int max_tries = 60;
 
+    while (uart_is_readable(UART_ID)) {
+        uart_getc(UART_ID);
+    }
+
     for (int i = 0; i < max_tries; i++) {
         // Send SYNC
         uart_write_blocking_hex(txData.data(), txData.size());
         sleep_ms((uint32_t)wait_ms);
         wait_ms += 1.0f; // Slightly increase wait each iteration
 
+        int addr = 0;
+        int count = 0;
         // If the camera responds, break early
-        if (uart_is_readable(UART_ID)) {
-            printf("Responding early");
-            break;
+        while (uart_is_readable(UART_ID)) {
+            uint8_t data[6];
+            data[addr] = uart_getc(UART_ID);
+            if (addr == 0 && data[0] == 170) {
+                addr++;
+            } else if (addr == 1 && data[1] == 14) {
+                addr++;
+            } else if (addr == 2 && data[2] == 13) {
+                addr++;
+            } else if (addr == 3) {
+                addr++;
+            } else if (addr == 4 && data[4] == 0) {
+                addr++;
+            } else if (addr == 5 && data[5] == 0) {
+                break;
+            }
         }
     }
 
@@ -106,8 +125,15 @@ static void sync_cam() {
     uart_read_all(rxData);
     // uart_read_blocking(UART_ID, rxData.data(), rxData.size());
 
-    printf("SYNC response (%d bytes): ", (int)rxData.size());
+    printf("SYNC ACK response (%d bytes): ", (int)rxData.size());
     print_hex_data(rxData);
+
+    std::vector<uint8_t> rxDataSync(6);
+    uart_read_all(rxDataSync);
+    // uart_read_blocking(UART_ID, rxData.data(), rxData.size());
+
+    printf("SYNC response (%d bytes): ", (int)rxDataSync.size());
+    print_hex_data(rxDataSync);
 
     // Send ACK: "AA 0E 0D 00 00 00"
     std::vector<uint8_t> ack = hex_string_to_bytes("AA 0E 0D 00 00 00");
@@ -124,9 +150,9 @@ static void sync_cam() {
 }
 
 static int init_cam() {
-    uart_init(uart0, BAUD_RATE); // Or 921600 if stable
-    gpio_set_function(0, GPIO_FUNC_UART); // TX
-    gpio_set_function(1, GPIO_FUNC_UART); // RX
+    uart_init(uart1, BAUD_RATE); // Or 921600 if stable
+    gpio_set_function(4, GPIO_FUNC_UART); // TX
+    gpio_set_function(5, GPIO_FUNC_UART); // RX
     // 1) SYNC
     sync_cam();
 
@@ -134,7 +160,7 @@ static int init_cam() {
     {
         std::vector<uint8_t> cmd = hex_string_to_bytes("AA 01 00 07 03 05");
         uart_write_blocking_hex(cmd.data(), cmd.size());
-        sleep_ms(100);
+        sleep_ms(1000);
 
         // Read any response
         std::vector<uint8_t> rx;
