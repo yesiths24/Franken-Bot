@@ -10,10 +10,11 @@
 
 #include <algorithm>
 #include <stdexcept>
+#include "pico/time.h"
+
 
 #include "packet.h"
 #include "commands.c"
-#include "example.c"
 #include "video_C_JAS.cpp"
 
 #define TCP_PORT 1234
@@ -25,8 +26,10 @@
 #define CHUNK_SIZE 512
 
 
-#define IMAGE_SIZE (sizeof(fake_jpeg_data))
 
+#define TIME_DIFF_MS(start, end) ((absolute_time_diff_us(start, end)) / 1000)
+
+bool init = false;
 typedef struct TCP_SERVER_T_ {
     struct tcp_pcb *server_pcb;
     struct tcp_pcb *client_pcb;
@@ -211,7 +214,7 @@ void send_image(TCP_SERVER_T *state, const std::vector<uint8_t>& image_data) {
 
         tcp_output(state->client_pcb);
         sent += chunk;
-        printf("Sent %zu bytes\n", sent);
+        //printf("Sent %zu bytes\n", sent);
     }
 
     printf("Image sent successfully: %u bytes\n", img_len);
@@ -223,19 +226,37 @@ void stream(TCP_SERVER_T *state) {
         return; // No active connection, don't stream
     }
 
+    absolute_time_t t0 = get_absolute_time();
 
-    init_cam();
+    // 1. Init camera
+    if (!init) {
+        init_cam();
+        //init = true;
+    }
+    absolute_time_t t1 = get_absolute_time();
+    printf("[Timing] Camera init took %lld ms\n", TIME_DIFF_MS(t0, t1));
 
     std::vector<uint8_t> image;
 
-    if (capture_frame_once(image)) {
-        printf("Sending image over TCP...");
+    // 2. Capture frame
+    absolute_time_t t2 = get_absolute_time();
+    bool success = capture_frame_once(image);
+    absolute_time_t t3 = get_absolute_time();
+    printf("[Timing] Frame capture took %lld ms\n", TIME_DIFF_MS(t2, t3));
+
+    // 3. Send over TCP
+    if (success) {
+        absolute_time_t t4 = get_absolute_time();
+        printf("Sending image over TCP...\n");
         send_image(state, image);
-        printf("Done!\n");
+        absolute_time_t t5 = get_absolute_time();
+        printf("Done sending!\n");
+        printf("[Timing] TCP send took %lld ms\n", TIME_DIFF_MS(t4, t5));
     } else {
         printf("Capture failed.\n");
     }
-    
+
+    printf("[Timing] Total stream() call time: %lld ms\n", TIME_DIFF_MS(t0, get_absolute_time()));
 }
 
 
