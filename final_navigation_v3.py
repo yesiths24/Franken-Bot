@@ -358,54 +358,77 @@ class Robot:
         print("[Robot] Saved updated map visualization to output_viz.jpg")
 
     def track_once(self):
-        """
-        Poll the HuskyLens for learned blocks (object).
-        Returns:
-          - "STOP" if the object is close enough to halt
-          - "TRACKING" if an object is detected but not that close
-          - None if no object is in view
-        """
-        if not self.hl:
-            return None
+    """
+    Poll the HuskyLens for learned blocks (object).
+    Returns:
+      - "STOP" if the object is close enough to halt
+      - "TRACKING" if an object is detected but not that close
+      - None if no object is in view
+    """
+    if not self.hl:
+        return None
 
-        try:
-            blocks = self.hl.learnedBlocks()
-        except IndexError:
-            blocks = None
+    try:
+        blocks = self.hl.learnedBlocks()
+    except IndexError:
+        blocks = None
 
-        if not blocks:
-            # No object in view => normal navigation continues
-            return None
+    if not blocks:
+        # No object in view => normal navigation continues
+        return None
 
-        # If multiple blocks, pick the first (or the biggest, etc.)
-        if isinstance(blocks, list):
-            obj = blocks[0]
-        else:
-            obj = blocks
+    # If multiple blocks, pick the first (or the biggest, etc.)
+    if isinstance(blocks, list):
+        obj = blocks[0]
+    else:
+        obj = blocks
 
-        # If the object is very close, STOP everything
-        if obj.height >= STOP_HEIGHT:
-            return "STOP"
+    # If the object is very close, STOP everything
+    if obj.height >= STOP_HEIGHT:
+        return "STOP"
 
-        # Otherwise, we are in "TRACKING" mode
-        offset = obj.x - 160  # 160 is center of a 320 px wide view
-        scale = 0.6
-        turn = clamp(int(offset * scale), -100, 100)
+    # Otherwise, we are in "TRACKING" mode
+    # ---------------------------------------------------------
+    # 1) Calculate how close we are to the stop condition,
+    #    scaling speed down as height approaches STOP_HEIGHT.
+    #    If STOP_HEIGHT=100, then object.height = 50 => factor=0.5
+    #    (so half speed).
+    speed_factor = 1.0 - (obj.height / float(STOP_HEIGHT))
+    speed_factor = clamp(speed_factor, 0.0, 1.0)
 
-        if -10 < offset < 10:
-            # If basically centered, move forward
-            self.mover.forward()
-            print(f"[Robot] Tracking: object roughly centered, moving forward.")
-        else:
-            # Adjust speeds for turning or slight arc
-            right_speed = clamp(80 - turn, -100, 100)
-            left_speed = clamp(80 + turn, -100, 100)
-            left_byte = left_speed.to_bytes(1, byteorder='little', signed=True)
-            right_byte = right_speed.to_bytes(1, byteorder='little', signed=True)
-            self.mover.set_motor_speed(left_byte, right_byte)
-            print(f"[Robot] Tracking: offset={offset}, L={left_speed}, R={right_speed}")
+    # ---------------------------------------------------------
+    # 2) Determine how far left or right we need to turn based on
+    #    horizontal offset. We'll still allow a maximum “base” speed
+    #    but scaled by speed_factor as well.
+    offset = obj.x - 160  # 160 is center in a 320-pixel wide frame
+    scale = 0.6
 
-        return "TRACKING"
+    # For “turn”, we also clamp to a range that respects speed_factor
+    # so turning slows down as the object grows.
+    # We'll pick 80 as a “max turning offset” and scale it:
+    max_turn = 80 * speed_factor
+    turn = clamp(int(offset * scale), -max_turn, max_turn)
+
+    # "base_speed" is the forward speed if offset == 0.
+    # We'll pick 80 as the normal speed, scaled down by speed_factor.
+    base_speed = 80.0 * speed_factor
+
+    # Compute left/right speeds. If offset > 0, turn left by reducing right speed.
+    # If offset < 0, turn right by reducing left speed.
+    left_speed = clamp(int(base_speed + turn), -100, 100)+100
+    right_speed = clamp(int(base_speed - turn), -100, 100)+100
+
+    # ---------------------------------------------------------
+    # 3) Send the computed speeds to the Pico, letting us arc or go straight.
+    left_byte = chr(left_speed)
+    right_byte = chr(right_speed)
+    self.mover.set_motor_speed(left_byte, right_byte)
+
+    print(f"[Robot] Tracking: offset={offset}, height={obj.height}, "
+          f"L={left_speed}, R={right_speed}, speed_factor={speed_factor:.2f}")
+
+    return "TRACKING"
+
 
 # =============================================================================
 # =                                MAIN CODE                                  =
