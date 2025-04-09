@@ -183,9 +183,14 @@ bool capture_frame_once(std::vector<uint8_t>& image_data) {
     uart_read_blocking(UART_ID, header.data(), header.size());
 
     uint32_t length = header[9] + (header[10] << 8) + (header[11] << 16);
+    printf("Image length: %u\n", length);
 
-    image_data.clear();
-    image_data.resize(length);
+    // Fully release previous memory to avoid fragmentation
+    printf("1");
+    std::vector<uint8_t>().swap(image_data);
+    printf("2");
+    image_data.reserve(length);
+    printf("3");
 
     uint32_t num_packets = (uint32_t)ceil(length / 250.0f);
     size_t offset = 0;
@@ -198,7 +203,8 @@ bool capture_frame_once(std::vector<uint8_t>& image_data) {
             uint8_t packet[256];
             uart_read_blocking(UART_ID, packet, 256);
             for (int j = 4; j < 254 && offset < length; j++) {
-                image_data[offset++] = packet[j];
+                image_data.push_back(packet[j]);
+                offset++;
             }
         } else {
             uint8_t header[4];
@@ -208,7 +214,8 @@ bool capture_frame_once(std::vector<uint8_t>& image_data) {
             uart_read_blocking(UART_ID, last_packet.data(), last_len);
 
             for (int j = 0; j < last_len && offset < length; j++) {
-                image_data[offset++] = last_packet[j];
+                image_data.push_back(last_packet[j]);
+                offset++;
             }
 
             uint8_t fin[6] = {0xAA, 0x0E, 0x00, 0x00, 0xF0, 0xF0};
@@ -219,6 +226,7 @@ bool capture_frame_once(std::vector<uint8_t>& image_data) {
     printf("Image capture complete. Total bytes stored: %d\n", (int)image_data.size());
     return true;
 }
+
 
 void send_image_over_usb(const std::vector<uint8_t>& image_data) {
     printf("---START-IMAGE---\n"); // delimiter for the PC script
