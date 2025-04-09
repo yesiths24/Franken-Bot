@@ -18,7 +18,7 @@
 #define UART_TX_PIN 4
 #define UART_RX_PIN 5
 
-#define DRIVE_SPEED 35
+#define DRIVE_SPEED 30
 
 int cmd_chars_recv;
 uint8_t cmd[3];

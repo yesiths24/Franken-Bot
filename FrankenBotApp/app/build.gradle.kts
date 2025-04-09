@@ -8,7 +8,11 @@ android {
 
     defaultConfig {
         applicationId = "com.example.frankenbotapp"
+<<<<<<< Updated upstream
         minSdk = 24
+=======
+        minSdk = 31
+>>>>>>> Stashed changes
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
