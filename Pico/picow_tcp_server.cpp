@@ -176,18 +176,6 @@ static bool tcp_server_open(void *arg) {
     return true;
 }
 
-void send_ack(const char *mode)
-{
-    return;
-    if (tpcb1 == NULL) return;
-
-    char buf[20];
-    int len = snprintf(buf, sizeof(buf), "ACK:%s\n", mode);
-    printf("Sending ACK: %s\n", buf);
-
-    /* ---- send the line ---- */
-    tcp_write(tpcb1, buf, len, TCP_WRITE_FLAG_COPY);   // <-- adjust if needed
-}
 
 
 /*********************************************************************
@@ -209,10 +197,22 @@ bool capture_frame_and_stream(TCP_SERVER_T *state)
     uart_write_blocking(UART_ID, get_pic_cmd, sizeof(get_pic_cmd));
 
     /* ---------- 2. Read 12‑byte header ---------- */
-    uint8_t hdr[12];
-    uart_read_blocking(UART_ID, hdr, sizeof(hdr));
 
-    uint32_t length = hdr[9] | (hdr[10] << 8) | (hdr[11] << 16);
+    uint8_t hdr0[6];
+
+    uart_read_blocking(UART_ID, hdr0, sizeof(hdr0));
+
+    printf("hdr0: %02X %02X %02X %02X %02X %02X\n", hdr0[0], hdr0[1], hdr0[2], hdr0[3], hdr0[4], hdr0[5]);
+
+    uint8_t hdr1[6];
+
+    uart_read_blocking(UART_ID, hdr1, sizeof(hdr1));
+
+    printf("hdr1: %02X %02X %02X %02X %02X %02X\n", hdr1[0], hdr0[1], hdr1[2], hdr1[3], hdr1[4], hdr1[5]);
+
+
+
+    uint32_t length = hdr1[3] | (hdr1[4] << 8) | (hdr1[5] << 16);
     const uint32_t MAX_IMAGE_SIZE = 100000;           // sanity check
     if (length == 0 || length > MAX_IMAGE_SIZE) {
         printf("Invalid image length: %u\n", length);
@@ -250,6 +250,7 @@ bool capture_frame_and_stream(TCP_SERVER_T *state)
             if (last_len > 250) last_len = 250;
 
             uart_read_blocking(UART_ID, uart_buf, last_len);
+            uart_read_blocking(UART_ID, NULL, 2);
             tcp_write(state->client_pcb, uart_buf, last_len, TCP_WRITE_FLAG_COPY);
 
             // Tell camera we are done
@@ -274,7 +275,7 @@ void stream(TCP_SERVER_T *state)
     // 1. Camera init (unchanged)
     if (!init) { 
         init_cam(); 
-        //init = true; 
+        init = true; 
         }
 
     // 2. Capture **and** stream in one go
