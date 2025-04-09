@@ -3,6 +3,7 @@
 #include "hardware/uart.h"
 #include "hardware/irq.h"
 #include "drive.cpp"
+#include "math.h"
 
 
 // UART defines
@@ -107,28 +108,18 @@ void on_uart_rx()
                 cmd[4] = 0;
             }
         } else if (cmd[0] == (uint8_t) 'M') {
-            if (cmd_chars_recv > 1 && cmd[1] == (uint8_t) 'R') {
+            if (cmd_chars_recv > 1 && cmd[1] == (uint8_t) 'T') {
                 if (cmd_chars_recv > 2 && cmd[2] == (uint8_t) 'S') {
-                    if (cmd_chars_recv > 3) {
-                        if (cmd_chars_recv > 4) {
-                            cmd_chars_recv++;
-                            printf("motorset %d, %d\n", (int) cmd[3], (int) cmd[4]);
-                            setDriveSpeeds((int) cmd[3], (int) cmd[4]);
-                            cmd_chars_recv = 0;
-                            cmd[0] = 0;
-                            cmd[1] = 0;
-                            cmd[2] = 0;
-                            cmd[3] = 0;
-                            cmd[4] = 0;
-                        } else  if (cmd_chars_recv > 4) {
-                            cmd_chars_recv = 0;
-                            cmd[0] = 0;
-                            cmd[1] = 0;
-                            cmd[2] = 0;
-                            cmd[3] = 0;
-                            cmd[4] = 0;
-                        }
-                    } else if (cmd_chars_recv > 3) {
+                    if (cmd_chars_recv > 4) {
+                        printf("motorset %f, %f\n", round((((float) cmd[3]) - 100) * DRIVE_SPEED / 100), round((((float) cmd[4]) - 100) * DRIVE_SPEED / 100));
+                        setDriveSpeeds(round((((float) cmd[3]) - 100) * DRIVE_SPEED / 100), round((((float) cmd[4]) - 100) * DRIVE_SPEED / 100));
+                        cmd_chars_recv = 0;
+                        cmd[0] = 0;
+                        cmd[1] = 0;
+                        cmd[2] = 0;
+                        cmd[3] = 0;
+                        cmd[4] = 0;
+                    } else  if (cmd_chars_recv > 4) {
                         cmd_chars_recv = 0;
                         cmd[0] = 0;
                         cmd[1] = 0;
@@ -136,6 +127,7 @@ void on_uart_rx()
                         cmd[3] = 0;
                         cmd[4] = 0;
                     }
+        
                 } else if (cmd_chars_recv > 2) {
                     cmd_chars_recv = 0;
                     cmd[0] = 0;
