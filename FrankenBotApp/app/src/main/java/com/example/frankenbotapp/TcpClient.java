@@ -1,8 +1,11 @@
 package com.example.frankenbotapp;
 
+import android.os.Handler;
+import android.os.Looper;
 import android.widget.TextView;
 
 import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -17,6 +20,8 @@ public class TcpClient {
     private Socket socket;
     private OutputStream outputStream;
     private InputStream inputStream;
+
+    private final Handler uiHandler = new Handler(Looper.getMainLooper());
 
     private TcpClient() {
         // Private constructor to prevent instantiation
@@ -76,40 +81,43 @@ public class TcpClient {
     }
 
     public byte[] receiveImageBytes() throws IOException {
-        if (inputStream == null) {
-            throw new IOException("InputStream is null");
+        if (socket == null || socket.getInputStream() == null) {
+            throw new IOException("Socket or InputStream is null");
         }
 
-        // Step 1: Read the 4-byte image length prefix (big-endian)
+        socket.setSoTimeout(5000); // 5-second timeout on all reads
+
+        InputStream inputStream = socket.getInputStream();
+        DataInputStream dataIn = new DataInputStream(inputStream);
+
+        // Step 1: Read 4-byte image length prefix (big-endian)
         byte[] lengthBuffer = new byte[4];
-        int readLen = 0;
-        while (readLen < 4) {
-            int bytesRead = inputStream.read(lengthBuffer, readLen, 4 - readLen);
-            if (bytesRead == -1) throw new IOException("Stream closed while reading image length");
-            readLen += bytesRead;
-        }
+        dataIn.readFully(lengthBuffer); // Will throw SocketTimeoutException if stuck
 
-        int imageLength = ((lengthBuffer[0] & 0xFF) << 24) |
-                ((lengthBuffer[1] & 0xFF) << 16) |
-                ((lengthBuffer[2] & 0xFF) << 8) |
+        int imageLength =  (lengthBuffer[0] & 0xFF) << 24 |
+                (lengthBuffer[1] & 0xFF) << 16 |
+                (lengthBuffer[2] & 0xFF) << 8  |
                 (lengthBuffer[3] & 0xFF);
 
-        if (imageLength <= 0 || imageLength > 1024 * 1024) { // Sanity check: max 1MB
+        if (imageLength <= 0 || imageLength > 1024 * 1024) {
             throw new IOException("Invalid image length: " + imageLength);
         }
 
         // Step 2: Read the image data
         byte[] imageData = new byte[imageLength];
-        int totalRead = 0;
+        dataIn.readFully(imageData); // Will timeout if data stalls
 
-        while (totalRead < imageLength) {
-            int bytesRead = inputStream.read(imageData, totalRead, imageLength - totalRead);
-            if (bytesRead == -1) throw new IOException("Stream closed while reading image data");
-            totalRead += bytesRead;
+        // Step 3: Send ACK
+        try { Thread.sleep(50); } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         }
+        DataPacket dataPacket = new DataPacket("ack", "ack");
+        byte[] ackPacket = dataPacket.toBytes();
+        sendPacket(ackPacket); // assumes this sends to server properly
 
         return imageData;
     }
+
 
 
     /**

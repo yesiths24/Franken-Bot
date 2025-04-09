@@ -187,7 +187,11 @@ public class ManualActivity extends AppCompatActivity {
     }
 
     private void startImageStream() {
+        //Send a ack to get start streaming
         streamExecutor.execute(() -> {
+            DataPacket dataPacket = new DataPacket("ack", "ack");
+            boolean isSent = tcpClient.sendPacket(dataPacket.toBytes());
+
             ImageView imageView1 = findViewById(R.id.imageView1);
             TextView statusText  = findViewById(R.id.textView1);   // optional
 

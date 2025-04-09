@@ -39,7 +39,7 @@ typedef struct TCP_SERVER_T_ {
 struct tcp_pcb *tpcb1;
 int streaming = 0;  // Flag to indicate if streaming is active//paused//stopped
 static size_t jpeg_offset = 0;
-
+bool ackReceived = false; // Flag to indicate if ACK was received
 
 static TCP_SERVER_T* tcp_server_init(void) {
     TCP_SERVER_T *state = (TCP_SERVER_T *)calloc(1, sizeof(TCP_SERVER_T));
@@ -93,6 +93,7 @@ static err_t tcp_server_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, er
     if (!p) {
         printf("Client disconnected\n");
         tcp_server_result(arg, 0);  // Or some status if needed
+        ackReceived = false; // Reset the flag if client disconnected
         return ERR_OK;
     }
     if (p->tot_len < COMMAND_SIZE) {
@@ -119,7 +120,11 @@ static err_t tcp_server_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, er
     }
 
     printf("Received Data: Command=%s, Message=%s\n", command, message);
+    if (strcmp(command, "ack") == 0) {
+        ackReceived = true; // Set the flag to true when ACK is received
+        printf("ACK received\n");
 
+    }
     process_command(command, message);  // You’ll pass both as strings now
 
     pbuf_free(p);
@@ -174,51 +179,6 @@ static bool tcp_server_open(void *arg) {
     return true;
 }
 
-void send_image(TCP_SERVER_T *state, const std::vector<uint8_t>& image_data) {
-    if (state->client_pcb == NULL) {
-        printf("No client connected.\n");
-        return;
-    }
-
-    uint32_t img_len = image_data.size();
-    uint8_t len_bytes[4] = {
-        (uint8_t)(img_len >> 24),
-        (uint8_t)(img_len >> 16),
-        (uint8_t)(img_len >> 8),
-        (uint8_t)(img_len)
-    };
-
-    // Send 4-byte header first
-    tcp_write(state->client_pcb, len_bytes, 4, TCP_WRITE_FLAG_COPY);
-    tcp_output(state->client_pcb);
-
-    // Then send image in chunks as before
-    const uint8_t* data = image_data.data();
-    size_t sent = 0;
-
-    while (sent < img_len) {
-        size_t space = tcp_sndbuf(state->client_pcb);
-        size_t chunk = std::min((size_t)CHUNK_SIZE, image_data.size() - sent);
-
-        if (chunk > space) {
-            cyw43_arch_poll();
-            sleep_ms(10);
-            continue;
-        }
-
-        err_t err = tcp_write(state->client_pcb, data + sent, chunk, TCP_WRITE_FLAG_COPY);
-        if (err != ERR_OK) {
-            printf("tcp_write failed: %d\n", err);
-            return;
-        }
-
-        tcp_output(state->client_pcb);
-        sent += chunk;
-        //printf("Sent %zu bytes\n", sent);
-    }
-
-    printf("Image sent successfully: %u bytes\n", img_len);
-}
 
 /*********************************************************************
  *  capture_frame_and_stream()
@@ -281,9 +241,11 @@ bool capture_frame_and_stream(TCP_SERVER_T *state)
 
             // safety belt
             if (last_len > 250) last_len = 250;
-
+            printf("here");
             uart_read_blocking(UART_ID, uart_buf, last_len);
+            printf("there");
             uart_read_blocking(UART_ID, NULL, 2);
+            printf("where");
             tcp_write(state->client_pcb, uart_buf, last_len, TCP_WRITE_FLAG_COPY);
 
             // Tell camera we are done
@@ -321,6 +283,7 @@ void stream(TCP_SERVER_T *state)
     printf("[Timing] capture+TCP took %lld ms\n", TIME_DIFF_MS(t2, t3));
     printf("[Timing] Total stream() call time: %lld ms\n",
            TIME_DIFF_MS(t0, get_absolute_time()));
+    ackReceived = false;
 }
 
 
@@ -335,7 +298,15 @@ void run_tcp_server(void) {
         return;
     }
     while (!state->complete) {
-        stream(state);
+        //check if client disconnect
+        if (state->client_pcb == NULL) {
+            ackReceived = false; // Reset the flag if client disconnected
+        } else if (ackReceived) {
+            stream(state);
+        } else {
+            // Wait for ACK before streaming
+            printf(".");
+        }
 #if PICO_CYW43_ARCH_POLL
         cyw43_arch_poll();
         cyw43_arch_wait_for_work_until(make_timeout_time_ms(1000));
