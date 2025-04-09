@@ -112,6 +112,26 @@ public class TcpClient {
     }
 
 
+    /**
+     * Reads one line from the socket if already available, otherwise returns null.
+     * Non‑blocking; caller decides how often to poll / sleep.
+     */
+    public String readLineNonBlocking() {
+        if (inputStream == null ) return null;
+
+        StringBuilder sb = new StringBuilder();
+        int c;
+        try {
+            while ((c = inputStream.read()) != -1) {
+                if (c == '\n') break;
+                sb.append((char) c);
+                if (inputStream.available() == 0) break;
+            }
+        } catch (IOException e) {
+            return null;
+        }
+        return sb.toString().trim();
+    }
 
 
 
