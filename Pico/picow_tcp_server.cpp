@@ -37,7 +37,7 @@ typedef struct TCP_SERVER_T_ {
 } TCP_SERVER_T;
 
 struct tcp_pcb *tpcb1;
-bool streaming = false;
+int streaming = 0;  // Flag to indicate if streaming is active//paused//stopped
 static size_t jpeg_offset = 0;
 
 
@@ -120,8 +120,7 @@ static err_t tcp_server_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, er
 
     printf("Received Data: Command=%s, Message=%s\n", command, message);
 
-    tpcb1 = tpcb; // Store the current TCP PCB for later use
-    process_command(command, message); 
+    process_command(command, message);  // You’ll pass both as strings now
 
     pbuf_free(p);
     return ERR_OK;
@@ -136,7 +135,6 @@ static err_t tcp_server_accept(void *arg, struct tcp_pcb *client_pcb, err_t err)
     }
     
     DEBUG_printf("Client connected\n");
-    
 
     state->client_pcb = client_pcb;
     tcp_arg(client_pcb, state);
@@ -176,7 +174,51 @@ static bool tcp_server_open(void *arg) {
     return true;
 }
 
+void send_image(TCP_SERVER_T *state, const std::vector<uint8_t>& image_data) {
+    if (state->client_pcb == NULL) {
+        printf("No client connected.\n");
+        return;
+    }
 
+    uint32_t img_len = image_data.size();
+    uint8_t len_bytes[4] = {
+        (uint8_t)(img_len >> 24),
+        (uint8_t)(img_len >> 16),
+        (uint8_t)(img_len >> 8),
+        (uint8_t)(img_len)
+    };
+
+    // Send 4-byte header first
+    tcp_write(state->client_pcb, len_bytes, 4, TCP_WRITE_FLAG_COPY);
+    tcp_output(state->client_pcb);
+
+    // Then send image in chunks as before
+    const uint8_t* data = image_data.data();
+    size_t sent = 0;
+
+    while (sent < img_len) {
+        size_t space = tcp_sndbuf(state->client_pcb);
+        size_t chunk = std::min((size_t)CHUNK_SIZE, image_data.size() - sent);
+
+        if (chunk > space) {
+            cyw43_arch_poll();
+            sleep_ms(10);
+            continue;
+        }
+
+        err_t err = tcp_write(state->client_pcb, data + sent, chunk, TCP_WRITE_FLAG_COPY);
+        if (err != ERR_OK) {
+            printf("tcp_write failed: %d\n", err);
+            return;
+        }
+
+        tcp_output(state->client_pcb);
+        sent += chunk;
+        //printf("Sent %zu bytes\n", sent);
+    }
+
+    printf("Image sent successfully: %u bytes\n", img_len);
+}
 
 /*********************************************************************
  *  capture_frame_and_stream()
@@ -189,7 +231,6 @@ static bool tcp_server_open(void *arg) {
  *********************************************************************/
 bool capture_frame_and_stream(TCP_SERVER_T *state)
 {
-    printf("Capturing.....");
     if (state->client_pcb == nullptr) return false;   // no client
 
     /* ---------- 1. Ask the camera for a picture ---------- */
@@ -197,20 +238,12 @@ bool capture_frame_and_stream(TCP_SERVER_T *state)
     uart_write_blocking(UART_ID, get_pic_cmd, sizeof(get_pic_cmd));
 
     /* ---------- 2. Read 12‑byte header ---------- */
-
     uint8_t hdr0[6];
-
     uart_read_blocking(UART_ID, hdr0, sizeof(hdr0));
-
     printf("hdr0: %02X %02X %02X %02X %02X %02X\n", hdr0[0], hdr0[1], hdr0[2], hdr0[3], hdr0[4], hdr0[5]);
-
     uint8_t hdr1[6];
-
     uart_read_blocking(UART_ID, hdr1, sizeof(hdr1));
-
-    printf("hdr1: %02X %02X %02X %02X %02X %02X\n", hdr1[0], hdr0[1], hdr1[2], hdr1[3], hdr1[4], hdr1[5]);
-
-
+    printf("hdr1: %02X %02X %02X %02X %02X %02X\n", hdr1[0], hdr1[1], hdr1[2], hdr1[3], hdr1[4], hdr1[5]);
 
     uint32_t length = hdr1[3] | (hdr1[4] << 8) | (hdr1[5] << 16);
     const uint32_t MAX_IMAGE_SIZE = 100000;           // sanity check
@@ -302,9 +335,7 @@ void run_tcp_server(void) {
         return;
     }
     while (!state->complete) {
-        if (streaming) {
-            stream(state);
-        } 
+        stream(state);
 #if PICO_CYW43_ARCH_POLL
         cyw43_arch_poll();
         cyw43_arch_wait_for_work_until(make_timeout_time_ms(1000));

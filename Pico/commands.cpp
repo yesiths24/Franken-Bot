@@ -84,11 +84,11 @@ void process_command(const char *command, const char *message)
 void core1_entry() {
     while(true) {
         if (mode == 1) {
-            printf("Running in auto mode\n");
+            //printf("Running in auto mode\n");
         } else if (mode == 2) {
-            printf("Running in track mode\n");
+            //printf("Running in track mode\n");
         } else {
-            printf("Running in manual mode\n");
+            //printf("Running in manual mode\n");
         }
         sleep_ms(1000); // Sleep for 1 second
     }
