@@ -14,7 +14,7 @@
 
 
 #include "packet.h"
-#include "commands.c"
+#include "commands.cpp"
 #include "video_C_JAS.cpp"
 
 #define TCP_PORT 1234
@@ -136,6 +136,7 @@ static err_t tcp_server_accept(void *arg, struct tcp_pcb *client_pcb, err_t err)
     }
     
     DEBUG_printf("Client connected\n");
+    
 
     state->client_pcb = client_pcb;
     tcp_arg(client_pcb, state);

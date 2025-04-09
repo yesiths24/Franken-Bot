@@ -78,6 +78,9 @@ public class ManualActivity extends AppCompatActivity {
 
 
         AutoCompleteTextView autoCompleteTextView = findViewById(R.id.autoCompleteTextView1);
+        //set default mode to manual
+        autoCompleteTextView.setText(modes[0], false);
+        modeChanged = true; //to make sure bot starts in manual mode
         autoCompleteTextView.setAdapter(
                 new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, modes));
 

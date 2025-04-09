@@ -2,10 +2,10 @@
 #include <string.h>
 #include <math.h>
 #include "packet.h"
-#include "drive.c"          // <- renamed .c to .h so we only include prototypes
+#include "drive.cpp"
 #include "lwip/tcp.h"
 
-int mode = 0; // 0 = manual, 1 = auto
+volatile int mode = 0; // 0 = manual, 1 = auto
 
 void start_mode(int mode) {
     switch (mode) {
@@ -32,15 +32,14 @@ void process_command(const char *command, const char *message)
     if (strcmp(command, "drv") == 0 && mode == 0) {
         float left, right;
         if (sscanf(message, "%f,%f", &left, &right) == 2) {
-            setDriveSpeeds(left, right);
+            set_drive_speeds(left, right);
         }
         return;
     }
 
     /* --------------- stop ---------------- */
     if (strcmp(command, "stop") == 0 && mode == 0) {
-        printf("Stopping\n");
-        setDriveSpeeds(0, 0);
+        set_drive_speeds(0, 0);
         return;
     }
 
@@ -81,3 +80,16 @@ void process_command(const char *command, const char *message)
     printf("Unknown command: %s\n", command);
 }
 
+// Runs on second core
+void core1_entry() {
+    while(true) {
+        if (mode == 1) {
+            printf("Running in auto mode\n");
+        } else if (mode == 2) {
+            printf("Running in track mode\n");
+        } else {
+            printf("Running in manual mode\n");
+        }
+        sleep_ms(1000); // Sleep for 1 second
+    }
+}

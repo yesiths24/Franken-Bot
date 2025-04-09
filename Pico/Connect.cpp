@@ -29,11 +29,14 @@ void hello() {
 }
 
 
+
 int main() {
     stdio_init_all();
-    initDrive();
+    init_drive();
     sleep_ms(5000);
     start_hotspot();   
+
+    multicore_launch_core1(core1_entry);
 
     while(1) {
         run_tcp_server();
