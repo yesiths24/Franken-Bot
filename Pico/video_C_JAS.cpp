@@ -14,7 +14,7 @@
 // Adjust these pins to match your wiring:
 #define PIN_UART_TX   0
 #define PIN_UART_RX   1
-#define BAUD_RATE     115200
+#define BAUD_RATE     921600
 
 //---------------------------------------------------------
 // Helper: Convert a hex string like "AA 0D 00 00 00 00" to a byte array
@@ -124,7 +124,7 @@ static void sync_cam() {
 }
 
 static int init_cam() {
-    uart_init(uart0, 115200); // Or 921600 if stable
+    uart_init(uart0, BAUD_RATE); // Or 921600 if stable
     gpio_set_function(0, GPIO_FUNC_UART); // TX
     gpio_set_function(1, GPIO_FUNC_UART); // RX
     // 1) SYNC
