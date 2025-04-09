@@ -432,15 +432,7 @@ if __name__ == '__main__':
 
     # If successful, set mode
     if hl:
-        mode = input("Please enter mode of operation:\n1: tag recognition\n2: object tracking\n> ")
-        if mode == "1":
-            hl.algorthim("ALGORITHM_TAG_RECOGNITION")
-        elif mode == "2":
-            hl.algorthim("ALGORITHM_OBJECT_TRACKING")
-        else:
-            print("Invalid selection; defaulting to object tracking.")
-            hl.algorthim("ALGORITHM_OBJECT_TRACKING")
-        learnObject(hl)
+        hl.algorthim("ALGORITHM_TAG_RECOGNITION")
     else:
         print("Warning: HuskyLens not initialized. Proceeding without HL.")
 
