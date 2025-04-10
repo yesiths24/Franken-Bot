@@ -36,7 +36,7 @@ pico_sdk_init()
 # Add executable. Default name is the project name, version 0.1
 
 add_executable(lcd_1602_i2c
-        lcd_1602_i2c.c
+        lcd_1602_i2c.cpp
         )
 
 # pull in common dependencies and additional i2c hardware support

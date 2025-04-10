@@ -2,56 +2,139 @@
 #include "pico/stdlib.h"
 #include "hardware/uart.h"
 #include "hardware/irq.h"
+#include "hwconfigs.h"
 #include "drive/drive.cpp"
 
 int cmd_chars_recv;
 uint8_t cmd[3];
 
 
-void on_pi_uart_rx() {
+void on_pi_uart_rx() 
+{
     
     while (uart_is_readable(PI_UART_ID)) {
         uint8_t cmd_char = uart_getc(PI_UART_ID);
         cmd[cmd_chars_recv] = cmd_char;
         cmd_chars_recv++;
-        if (cmd_chars_recv == 3) {
-            if (cmd[0] == (uint8_t) 'D' && cmd[1] == (uint8_t) 'R') {
-                switch (cmd[2]) {
-                    case (uint8_t) 'F':
-                        set_drive_speeds(AUTO_DRIVE_SPEED, AUTO_DRIVE_SPEED);
-                        printf("drive forward\n");
-                        break;
-                    case (uint8_t) 'B':
-                        set_drive_speeds(-AUTO_DRIVE_SPEED, -AUTO_DRIVE_SPEED);
-                        printf("drive backward\n");
-                        break;
-                    case (uint8_t) 'L':
-                        set_drive_speeds(-0.75*AUTO_DRIVE_SPEED, 0.75*AUTO_DRIVE_SPEED);
-                        printf("turn left\n");
-                        break;
-                    case (uint8_t) 'R':
-                        set_drive_speeds(0.75*AUTO_DRIVE_SPEED, -0.75*AUTO_DRIVE_SPEED);
-                        printf("turn right\n");
-                        break;
-                    case (uint8_t) 'S':
-                        set_drive_speeds(0,0);
-                        printf("halt\n");
-                        break;
-                    default:
-                        printf("invalid drive command, halting!\n");
+        printf("Recv %d, count = %d\n", cmd_char, cmd_chars_recv);
+        if (cmd[0] == (uint8_t) 'D') {
+            if (cmd[1] == (uint8_t) 'R' && cmd_chars_recv > 1) {
+                if (cmd_chars_recv > 2) {
+                    switch (cmd[2]) {
+                        case (uint8_t) 'F':
+                            set_drive_speeds(AUTO_DRIVE_SPEED, AUTO_DRIVE_SPEED);
+                            printf("drive forward\n");
+                            cmd_chars_recv = 0;
+                            cmd[0] = 0;
+                            cmd[1] = 0;
+                            cmd[2] = 0;
+                            cmd[3] = 0;
+                            cmd[4] = 0;
+                            break;
+                        case (uint8_t) 'B':
+                            set_drive_speeds(-AUTO_DRIVE_SPEED, -AUTO_DRIVE_SPEED);
+                            printf("drive backward\n");
+                            cmd_chars_recv = 0;
+                            cmd[0] = 0;
+                            cmd[1] = 0;
+                            cmd[2] = 0;
+                            cmd[3] = 0;
+                            cmd[4] = 0;
+                            break;
+                        case (uint8_t) 'L':
+                            set_drive_speeds(-0.75*AUTO_DRIVE_SPEED, 0.75*AUTO_DRIVE_SPEED);
+                            printf("turn left\n");
+                            cmd_chars_recv = 0;
+                            cmd[0] = 0;
+                            cmd[1] = 0;
+                            cmd[2] = 0;
+                            cmd[3] = 0;
+                            cmd[4] = 0;
+                            break;
+                        case (uint8_t) 'R':
+                            set_drive_speeds(0.75*AUTO_DRIVE_SPEED, -0.75*AUTO_DRIVE_SPEED);
+                            printf("turn right\n");
+                            cmd_chars_recv = 0;
+                            cmd[0] = 0;
+                            cmd[1] = 0;
+                            cmd[2] = 0;
+                            cmd[3] = 0;
+                            cmd[4] = 0;
+                            break;
+                        case (uint8_t) 'S':
+                            set_drive_speeds(0,0);
+                            printf("halt\n");
+                            cmd_chars_recv = 0;
+                            cmd[0] = 0;
+                            cmd[1] = 0;
+                            cmd[2] = 0;
+                            cmd[3] = 0;
+                            cmd[4] = 0;
+                            break;
+                        default:
+                            printf("invalid drive command, halting!\n");
+                            set_drive_speeds(0,0);
+                            cmd_chars_recv = 0;
+                            cmd[0] = 0;
+                            cmd[1] = 0;
+                            cmd[2] = 0;
+                            cmd[3] = 0;
+                            cmd[4] = 0;
+                    }
                 }
-            } else if (cmd[0] == (uint8_t) 'M' && cmd[1] == (uint8_t) 'R' && cmd[2] == (uint8_t) 'S') {
-                int8_t leftSpeedByte = uart_getc(PI_UART_ID);
-                int8_t rightSpeedByte = uart_getc(PI_UART_ID);
-                printf("motorset %d, %d\n", (int) leftSpeedByte, (int) rightSpeedByte);
-                set_drive_speeds((int) leftSpeedByte, (int) rightSpeedByte);
-            } else {
-                printf("invalid drive command, halting!\n");
+            
+            } else if (cmd_chars_recv > 1) {
+                cmd_chars_recv = 0;
+                cmd[0] = 0;
+                cmd[1] = 0;
+                cmd[2] = 0;
+                cmd[3] = 0;
+                cmd[4] = 0;
             }
-
+        } else if (cmd[0] == (uint8_t) 'M') {
+            if (cmd_chars_recv > 1 && cmd[1] == (uint8_t) 'T') {
+                if (cmd_chars_recv > 2 && cmd[2] == (uint8_t) 'S') {
+                    if (cmd_chars_recv > 4) {
+                        printf("motorset %f, %f\n", round((((float) cmd[3]) - 100) * AUTO_DRIVE_SPEED / 100), round((((float) cmd[4]) - 100) * AUTO_DRIVE_SPEED / 100));
+                        set_drive_speeds(round((((float) cmd[3]) - 100) * AUTO_DRIVE_SPEED / 100), round((((float) cmd[4]) - 100) * AUTO_DRIVE_SPEED / 100));
+                        cmd_chars_recv = 0;
+                        cmd[0] = 0;
+                        cmd[1] = 0;
+                        cmd[2] = 0;
+                        cmd[3] = 0;
+                        cmd[4] = 0;
+                    } else  if (cmd_chars_recv > 4) {
+                        cmd_chars_recv = 0;
+                        cmd[0] = 0;
+                        cmd[1] = 0;
+                        cmd[2] = 0;
+                        cmd[3] = 0;
+                        cmd[4] = 0;
+                    }
+        
+                } else if (cmd_chars_recv > 2) {
+                    cmd_chars_recv = 0;
+                    cmd[0] = 0;
+                    cmd[1] = 0;
+                    cmd[2] = 0;
+                    cmd[3] = 0;
+                    cmd[4] = 0;
+                }
+            } else if (cmd_chars_recv > 1) {
+                cmd_chars_recv = 0;
+                cmd[0] = 0;
+                cmd[1] = 0;
+                cmd[2] = 0;
+                cmd[3] = 0;
+                cmd[4] = 0;
+            }
+        } else {
+            cmd[0] = 0;
+            cmd[1] = 0;
+            cmd[2] = 0;
+            cmd[3] = 0;
+            cmd[4] = 0;
             cmd_chars_recv = 0;
-
-
         }
     }
 }
@@ -63,9 +146,11 @@ void pi_powerup()
     sleep_ms(1000);
     gpio_set_dir(PI_POWER_CTRL_PIN, 0);
 
+
+
 }
 
-int pi_uart_setup()
+void pi_uart_setup()
 {
     stdio_init_all();
 
@@ -77,6 +162,11 @@ int pi_uart_setup()
     // Set datasheet for more information on function select
     gpio_set_function(PI_UART_TX_PIN, UART_FUNCSEL_NUM(PI_UART_ID, PI_UART_TX_PIN));
     gpio_set_function(PI_UART_RX_PIN, UART_FUNCSEL_NUM(PI_UART_ID, PI_UART_RX_PIN));
+
+    uint8_t buf[3];
+    uart_read_blocking(PI_UART_ID, buf, 3);
+
+    uart_puts(PI_UART_ID, "PHL");
 
 
     // Set UART flow control CTS/RTS, we don't want these, so turn them off

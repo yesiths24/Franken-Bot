@@ -17,7 +17,7 @@
 #define PI_POWER_CTRL_PIN 14
 
 // Autonomous drive properties
-#define AUTO_DRIVE_SPEED 35
+#define AUTO_DRIVE_SPEED 30
 
 // drive system gpio/pwm config
 // A is LEFT motor, B is RIGHT motor

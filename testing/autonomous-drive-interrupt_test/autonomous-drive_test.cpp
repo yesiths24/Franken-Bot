@@ -112,7 +112,7 @@ void on_uart_rx()
                 if (cmd_chars_recv > 2 && cmd[2] == (uint8_t) 'S') {
                     if (cmd_chars_recv > 4) {
                         printf("motorset %f, %f\n", round((((float) cmd[3]) - 100) * DRIVE_SPEED / 100), round((((float) cmd[4]) - 100) * DRIVE_SPEED / 100));
-                        setDriveSpeeds(round((((float) cmd[3]) - 100) * DRIVE_SPEED / 100), round((((float) cmd[4]) - 100) * DRIVE_SPEED / 100));
+                        setDriveSpeeds(round((((float) cmd[3]) - 100) * (DRIVE_SPEED+7) / 100), round((((float) cmd[4]) - 100) * DRIVE_SPEED / 100));
                         cmd_chars_recv = 0;
                         cmd[0] = 0;
                         cmd[1] = 0;

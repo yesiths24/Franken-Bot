@@ -42,17 +42,15 @@ int run_manual() {
     return 0;
 }
 
-int run_auto() {
+void run_auto(uint8_t mode, uint8_t target_id) {
     // powerup pi
     pi_powerup();
 
     // handshake w pi and send instructions
+    pi_uart_setup();
+    uart_putc(PI_UART_ID, mode);
+    uart_putc(PI_UART_ID, target_id);
 
-    // set up rx interrupt on pi UART? or already set up?
-    //  is the pi5 likely to send gibberish during startup?
-    //  also, is the interrupt practical here? It'll have to
-    //      manage a lot of image data but also there's not
-    //      actually much else going on
 
     // run autonomous loop as necessary
     // expect a shitload of interrupts (if pi5 uart has rx interrupt set up)
