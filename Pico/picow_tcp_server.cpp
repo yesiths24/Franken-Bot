@@ -25,6 +25,9 @@
 #define STREAM_INTERVAL_MS 1000
 #define CHUNK_SIZE 512
 
+#define COMMAND_SIZE 5
+#define MESSAGE_SIZE 10
+
 
 
 #define TIME_DIFF_MS(start, end) ((absolute_time_diff_us(start, end)) / 1000)
@@ -103,21 +106,25 @@ static err_t tcp_server_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, er
     }
     
 
-    char command[COMMAND_SIZE + 1] = {0};  // +1 for null-termination
-    char message[MAX_MESSAGE_SIZE] = {0}; // Adjust based on expected limits
 
-    // Copy command (first 5 bytes)
-    pbuf_copy_partial(p, command, COMMAND_SIZE, 0);
-    command[COMMAND_SIZE] = '\0';
+    char command[COMMAND_SIZE + 1] = {0};  // null-terminated
+    char message[MESSAGE_SIZE + 1] = {0};  // null-terminated
 
-    // Copy remaining data as message
-    uint16_t message_len = p->tot_len - COMMAND_SIZE;
-    if (message_len > 0) {
-        pbuf_copy_partial(p, message, 
-            message_len < MAX_MESSAGE_SIZE ? message_len : MAX_MESSAGE_SIZE - 1,
-            COMMAND_SIZE);
-        message[message_len < MAX_MESSAGE_SIZE ? message_len : MAX_MESSAGE_SIZE - 1] = '\0';
+    if (p->tot_len < COMMAND_SIZE + MESSAGE_SIZE) {
+        // Not enough bytes yet
+        pbuf_free(p);
+        return ERR_OK;
     }
+
+    // Read full packet
+    uint8_t buffer[COMMAND_SIZE + MESSAGE_SIZE];
+    pbuf_copy_partial(p, buffer, COMMAND_SIZE + MESSAGE_SIZE, 0);
+
+    memcpy(command, buffer, COMMAND_SIZE);
+    memcpy(message, buffer + COMMAND_SIZE, MESSAGE_SIZE);
+
+    // Optional: strip trailing 0s from message if needed
+
 
     printf("Received Data: Command=%s, Message=%s\n", command, message);
     if (strcmp(command, "ack") == 0) {

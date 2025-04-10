@@ -9,6 +9,7 @@ import java.util.Arrays;
 
 public class DataPacket {
     private static final int COMMAND_SIZE = 5;
+    private static final int MESSAGE_SIZE = 10; // example
     private String command;
     private String message;
 
@@ -17,6 +18,7 @@ public class DataPacket {
         this.message = message;
     }
 
+
     public byte[] toBytes() {
         byte[] commandBytes = command.getBytes(StandardCharsets.UTF_8);
         byte[] commandFixed = new byte[COMMAND_SIZE];
@@ -24,29 +26,16 @@ public class DataPacket {
         System.arraycopy(commandBytes, 0, commandFixed, 0, Math.min(commandBytes.length, COMMAND_SIZE));
 
         byte[] messageBytes = message.getBytes(StandardCharsets.UTF_8);
+        byte[] messageFixed = new byte[MESSAGE_SIZE];
+        Arrays.fill(messageFixed, (byte) 0);
+        System.arraycopy(messageBytes, 0, messageFixed, 0, Math.min(messageBytes.length, MESSAGE_SIZE));
 
-        ByteBuffer buffer = ByteBuffer.allocate(COMMAND_SIZE + messageBytes.length);
+        ByteBuffer buffer = ByteBuffer.allocate(MESSAGE_SIZE + COMMAND_SIZE);
         buffer.put(commandFixed);
-        buffer.put(messageBytes);
+        buffer.put(messageFixed);
 
         return buffer.array();
     }
 
-    public static DataPacket fromBytes(byte[] data) {
-        ByteBuffer buffer = ByteBuffer.wrap(data);
-        buffer.order(ByteOrder.LITTLE_ENDIAN);
-
-        int commandLength = buffer.getInt();
-
-        byte[] commandBytes = new byte[commandLength];
-        buffer.get(commandBytes);
-        String command = new String(commandBytes, StandardCharsets.UTF_8);
-
-        byte[] messageBytes = new byte[data.length - 4 - commandLength];
-        buffer.get(messageBytes);
-        String message = new String(messageBytes, StandardCharsets.UTF_8);
-
-        return new DataPacket(command, message);
-    }
 
 }
