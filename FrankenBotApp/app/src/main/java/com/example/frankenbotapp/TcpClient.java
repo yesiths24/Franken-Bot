@@ -11,6 +11,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
 import java.nio.ByteBuffer;
 
 public class TcpClient {
@@ -84,7 +85,11 @@ public class TcpClient {
         if (socket == null || socket.getInputStream() == null) {
             throw new IOException("Socket or InputStream is null");
         }
-
+        DataPacket dataPacket = new DataPacket("ack", "ack");
+        boolean isSent = sendPacket(dataPacket.toBytes());
+        try { Thread.sleep(10); } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+        }
         socket.setSoTimeout(5000); // 5-second timeout on all reads
 
         InputStream inputStream = socket.getInputStream();
@@ -105,15 +110,13 @@ public class TcpClient {
 
         // Step 2: Read the image data
         byte[] imageData = new byte[imageLength];
-        dataIn.readFully(imageData); // Will timeout if data stalls
-
-        // Step 3: Send ACK
-        try { Thread.sleep(50); } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
+        try {
+            dataIn.readFully(imageData); // Will throw SocketTimeoutException if stuck
+        } catch (SocketTimeoutException e) {
+            return imageData;
         }
-        DataPacket dataPacket = new DataPacket("ack", "ack");
-        byte[] ackPacket = dataPacket.toBytes();
-        sendPacket(ackPacket); // assumes this sends to server properly
+
+
 
         return imageData;
     }

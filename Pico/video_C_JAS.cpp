@@ -262,6 +262,29 @@ void send_image_over_usb(const std::vector<uint8_t>& image_data) {
     printf("---END-IMAGE---\n");
 }
 
+bool uart_read_timeout(uart_inst_t *uart, uint8_t *out, uint32_t timeout_ms) {
+    absolute_time_t deadline = make_timeout_time_ms(timeout_ms);
+
+    while (!uart_is_readable(uart)) {
+        if (absolute_time_diff_us(get_absolute_time(), deadline) <= 0) {
+            return false;  // Timeout
+        }
+        tight_loop_contents();  // low-power wait
+    }
+
+    *out = uart_getc(uart);  // Read 1 byte
+    return true;
+}
+
+bool uart_read_n_timeout(uart_inst_t *uart, uint8_t *buf, size_t len, uint32_t timeout_ms) {
+    for (size_t i = 0; i < len; ++i) {
+        if (!uart_read_timeout(uart, &buf[i], timeout_ms)) {
+            printf("UART timeout at byte %zu\n", i);
+            return false;
+        }
+    }
+    return true;
+}
 /*
 
 //---------------------------------------------------------

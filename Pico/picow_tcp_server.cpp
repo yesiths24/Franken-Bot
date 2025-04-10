@@ -242,9 +242,17 @@ bool capture_frame_and_stream(TCP_SERVER_T *state)
             // safety belt
             if (last_len > 250) last_len = 250;
             printf("here");
-            uart_read_blocking(UART_ID, uart_buf, last_len);
+            if (uart_read_n_timeout(UART_ID, uart_buf, last_len, 500) == false) {
+                printf("UART timeout\n");
+                return false;
+            }
+            //uart_read_blocking(UART_ID, uart_buf, last_len);
             printf("there");
-            uart_read_blocking(UART_ID, NULL, 2);
+            if (uart_read_n_timeout(UART_ID, NULL, 2, 500) == false) {
+                printf("UART timeout\n");
+                return false;
+            }
+            //uart_read_blocking(UART_ID, NULL, 2);
             printf("where");
             tcp_write(state->client_pcb, uart_buf, last_len, TCP_WRITE_FLAG_COPY);
 
@@ -270,6 +278,7 @@ void stream(TCP_SERVER_T *state)
     // 1. Camera init (unchanged)
     if (!init) { 
         init_cam(); 
+        printf("Camera initialized.\n");
         init = true; 
         }
 
@@ -307,6 +316,7 @@ void run_tcp_server(void) {
             // Wait for ACK before streaming
             printf(".");
         }
+        sleep_ms(10); // Polling interval
 #if PICO_CYW43_ARCH_POLL
         cyw43_arch_poll();
         cyw43_arch_wait_for_work_until(make_timeout_time_ms(1000));

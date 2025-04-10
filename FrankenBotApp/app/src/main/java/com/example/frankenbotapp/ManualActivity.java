@@ -189,8 +189,7 @@ public class ManualActivity extends AppCompatActivity {
     private void startImageStream() {
         //Send a ack to get start streaming
         streamExecutor.execute(() -> {
-            DataPacket dataPacket = new DataPacket("ack", "ack");
-            boolean isSent = tcpClient.sendPacket(dataPacket.toBytes());
+
 
             ImageView imageView1 = findViewById(R.id.imageView1);
             TextView statusText  = findViewById(R.id.textView1);   // optional
@@ -198,7 +197,7 @@ public class ManualActivity extends AppCompatActivity {
             while (!Thread.currentThread().isInterrupted()) {
                 try {
                     /* ---------- one frame ---------- */
-                    byte[] imageData = tcpClient.receiveImageBytes();   // may throw
+                    byte[] imageData = tcpClient.receiveImageBytes();
 
                     if (imageData == null || imageData.length == 0) {
                         continue;                                       // skip empty frame
@@ -234,8 +233,16 @@ public class ManualActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+
+        // Stop the command sender
+        isSending = false;
+
+        // Stop image stream thread
+        streamExecutor.shutdownNow();
+        executorService.shutdownNow();
+
+        // Close TCP connection
         Executors.newSingleThreadExecutor().execute(
                 () -> TcpClient.getInstance().disconnect());
     }
-
 }
