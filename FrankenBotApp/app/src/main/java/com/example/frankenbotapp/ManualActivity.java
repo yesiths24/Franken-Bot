@@ -178,7 +178,7 @@ public class ManualActivity extends AppCompatActivity {
                 }
 
                 try {
-                    Thread.sleep(500);  // 500ms delay
+                    Thread.sleep(200);  // 500ms delay
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                 }
@@ -241,8 +241,10 @@ public class ManualActivity extends AppCompatActivity {
         streamExecutor.shutdownNow();
         executorService.shutdownNow();
 
+
         // Close TCP connection
         Executors.newSingleThreadExecutor().execute(
                 () -> TcpClient.getInstance().disconnect());
+        finish();
     }
 }

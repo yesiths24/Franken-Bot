@@ -40,7 +40,7 @@ typedef struct TCP_SERVER_T_ {
 } TCP_SERVER_T;
 
 struct tcp_pcb *tpcb1;
-int streaming = 0;  // Flag to indicate if streaming is active//paused//stopped
+bool streaming = true;  // Flag to indicate if streaming is active//paused//stopped
 static size_t jpeg_offset = 0;
 bool ackReceived = false; // Flag to indicate if ACK was received
 
@@ -198,11 +198,13 @@ static bool tcp_server_open(void *arg) {
  *********************************************************************/
 bool capture_frame_and_stream(TCP_SERVER_T *state)
 {
+    printf("capture_frame_and_stream()\n");
     if (state->client_pcb == nullptr) return false;   // no client
 
     /* ---------- 1. Ask the camera for a picture ---------- */
     static const uint8_t get_pic_cmd[] = {0xAA,0x04,0x05,0x00,0x00,0x00};
     uart_write_blocking(UART_ID, get_pic_cmd, sizeof(get_pic_cmd));
+    printf("write ");
 
     /* ---------- 2. Read 12‑byte header ---------- */
     uint8_t hdr0[6];
@@ -278,13 +280,22 @@ bool capture_frame_and_stream(TCP_SERVER_T *state)
 
 void stream(TCP_SERVER_T *state)
 {
+    if (!streaming) {
+        printf("Streaming paused.\n");
+        return;
+    }
+    printf("stream()\n");
     if (state->client_pcb == NULL) return;   // no client
 
     absolute_time_t t0 = get_absolute_time();
 
     // 1. Camera init (unchanged)
     if (!init) { 
-        init_cam(); 
+        if (init_cam() < 0) {
+            printf("Camera init failed.\n");
+            streaming = false;
+            return;
+        }
         printf("Camera initialized.\n");
         init = true; 
         }
